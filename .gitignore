@@ -1,0 +1,38 @@
+# Folder berisi data mentah/non-sistem
+/bukan sistem/
+
+# Python / AI Service
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+.env
+
+# YOLO Weights & Large Dataset Outputs
+*.pt
+/models/handwash_v1/
+/dataset/
+/snapshots/
+
+# Laravel
+/laravel-app/vendor/
+/laravel-app/node_modules/
+/laravel-app/public/storage
+/laravel-app/storage/*.key
+/laravel-app/.env
+/laravel-app/bootstrap/cache/*
+/laravel-app/storage/framework/cache/data/*
+/laravel-app/storage/framework/views/*
+/laravel-app/storage/framework/sessions/*
+/laravel-app/storage/framework/testing/*
+
+# IDEs & System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

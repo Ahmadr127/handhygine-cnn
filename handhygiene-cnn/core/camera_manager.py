@@ -1,0 +1,381 @@
+"""
+core/camera_manager.py — Multi-thread camera processor
+
+Setiap kamera berjalan di thread terpisah.
+Pipeline per frame:
+  capture → detect → track → zone check → compliance update → broadcast WS
+"""
+import cv2
+import time
+import threading
+import queue
+import base64
+import json
+import numpy as np
+import supervision as sv
+from datetime import datetime
+
+from config import (
+    FRAME_QUEUE_SIZE, STREAM_FPS,
+    CLASS_PERSON, INSTRUMENT_CLASSES, HANDWASH_CLASSES, CLASS_PINTU,
+    CLASS_NAMES,
+)
+from core.detector import Detector
+from core.tracker import Tracker
+from core.zone_manager import ZoneManager
+from core.group_compliance import GroupComplianceEngine, GroupState
+from utils.db import insert_monitoring_log, update_camera_status
+from utils.snapshot import save_snapshot
+
+
+# ─── Warna bounding box per state (disesuaikan dengan group state jika perlu) ──
+STATE_COLORS = {
+    "monitoring":          (200, 200, 200),   # abu
+    "carrying_instrument": (0, 165, 255),     # oranye
+    "hand_wash_zone":      (255, 255, 0),     # kuning
+    "patuh":               (0, 230, 0),       # hijau
+    "tidak_patuh":         (0, 0, 230),       # merah
+}
+
+STATE_LABELS_ID = {
+    "monitoring":          "Monitoring",
+    "carrying_instrument": "Membawa Instrumen",
+    "hand_wash_zone":      "Cuci Tangan",
+    "patuh":               "PATUH",
+    "tidak_patuh":         "TIDAK PATUH",
+}
+
+
+class CameraProcessor:
+    """
+    Memproses satu kamera: capture + detect + track + compliance.
+    Hasilkan frame ter-annotate ke frame_queue untuk WebSocket.
+    """
+
+    def __init__(self, camera_id: int, nama: str, source, group_id: int, group_engine: GroupComplianceEngine):
+        self.camera_id = camera_id
+        self.nama = nama
+        self.source = source  # int (USB), str (RTSP/file)
+        self.group_id = group_id
+        self.group_engine = group_engine
+        self._stop_event = threading.Event()
+        self.frame_queue: queue.Queue = queue.Queue(maxsize=FRAME_QUEUE_SIZE)
+
+        self.detector = Detector()
+        self.tracker = Tracker()
+        self.zone_mgr = ZoneManager(self.camera_id)
+
+        # Annotator supervision
+        self.box_annotator = sv.BoxAnnotator(thickness=2)
+        self.label_annotator = sv.LabelAnnotator(text_scale=0.5)
+        self._thread: threading.Thread | None = None
+
+    # ─── Start / Stop ────────────────────────────────────────────────────────
+
+    def start(self):
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._run, daemon=True, name=f"cam-{self.camera_id}")
+        self._thread.start()
+        print(f"[Camera {self.camera_id}] Dimulai: {self.nama} ({self.source})")
+
+    def stop(self):
+        self._stop_event.set()
+        if self._thread:
+            self._thread.join(timeout=5)
+        update_camera_status(self.camera_id, False)
+        print(f"[Camera {self.camera_id}] Dihentikan.")
+
+    def is_running(self) -> bool:
+        return self._thread is not None and self._thread.is_alive()
+
+    # ─── Processing Loop ─────────────────────────────────────────────────────
+
+    def _run(self):
+        # Parse source
+        src = int(self.source) if str(self.source).isdigit() else self.source
+        cap = cv2.VideoCapture(src)
+
+        if not cap.isOpened():
+            print(f"[Camera {self.camera_id}] GAGAL membuka sumber: {self.source}")
+            return
+
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        frame_delay = 1.0 / STREAM_FPS
+
+        while not self._stop_event.is_set():
+            t0 = time.time()
+            ret, frame = cap.read()
+
+            if not ret:
+                # RTSP reconnect
+                print(f"[Camera {self.camera_id}] Frame gagal, reconnect...")
+                cap.release()
+                time.sleep(2)
+                cap = cv2.VideoCapture(src)
+                continue
+
+            annotated = self._process_frame(frame)
+
+            # Encode ke JPEG → base64
+            _, buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            b64 = base64.b64encode(buf.tobytes()).decode("utf-8")
+
+            payload = {
+                "camera_id": self.camera_id,
+                "camera_name": self.nama,
+                "frame": b64,
+                "timestamp": datetime.now().isoformat(),
+            }
+
+            # Non-blocking push ke queue
+            try:
+                self.frame_queue.put_nowait(payload)
+            except queue.Full:
+                try:
+                    self.frame_queue.get_nowait()
+                    self.frame_queue.put_nowait(payload)
+                except queue.Empty:
+                    pass
+
+            # Rate limiting
+            elapsed = time.time() - t0
+            sleep_t = frame_delay - elapsed
+            if sleep_t > 0:
+                time.sleep(sleep_t)
+
+        cap.release()
+
+    def _process_frame(self, frame: np.ndarray) -> np.ndarray:
+        """
+        Jalankan pipeline deteksi → tracking → zone → compliance pada satu frame.
+        Return frame ter-annotate.
+        """
+        detections = self.detector.detect(frame)
+
+        if len(detections) == 0:
+            return frame
+
+        # Tracking
+        tracked = self.tracker.update(detections)
+
+        if len(tracked) == 0:
+            return frame
+
+        # Pisahkan person dan non-person
+        person_mask = tracked.class_id == CLASS_PERSON
+        instrument_mask = np.isin(tracked.class_id, list(INSTRUMENT_CLASSES))
+
+        persons = tracked[person_mask]
+        instruments = tracked[instrument_mask]
+
+        # Buat set bounding box instrumen (untuk cek proximity)
+        instr_boxes = instruments.xyxy if len(instruments) > 0 else np.array([])
+
+        labels = []
+        colors = []
+
+        for i in range(len(persons)):
+            tid = int(persons.tracker_id[i]) if persons.tracker_id is not None else -1
+            bbox = persons.xyxy[i]
+            conf = float(persons.confidence[i])
+
+            # Posisi bawah tengah (posisi kaki) untuk zone check
+            bx, by = Tracker.get_bottom_center(bbox)
+            cx, cy = Tracker.get_center(bbox)
+
+            # Cek apakah membawa instrumen (overlap/proximity)
+            near_instrument = self._is_near_instrument(bbox, instr_boxes)
+
+            in_handwash = self.zone_mgr.is_in_handwash_zone(bx, by)
+            in_door = self.zone_mgr.is_in_door_zone(bx, by)
+
+            if near_instrument:
+                self.group_engine.report_instrument(self.camera_id, str(tid), conf, frame)
+                state = "carrying_instrument"
+            elif in_handwash:
+                self.group_engine.report_hand_wash(self.camera_id)
+                state = "hand_wash_zone"
+            elif in_door:
+                self.group_engine.report_door_entry(self.camera_id, frame)
+                state = "monitoring"  # At door
+            else:
+                state = "monitoring"
+
+            label = f"#{tid} {STATE_LABELS_ID.get(state, state)}"
+            labels.append(label)
+            colors.append(STATE_COLORS.get(state, (200, 200, 200)))
+
+        # Annotate persons
+        annotated = frame.copy()
+        if len(persons) > 0:
+            annotated = self.box_annotator.annotate(annotated, persons)
+            annotated = self.label_annotator.annotate(annotated, persons, labels)
+
+        # Annotate instruments (bounding box saja)
+        if len(instruments) > 0:
+            for box in instruments.xyxy:
+                x1, y1, x2, y2 = map(int, box)
+                cv2.rectangle(annotated, (x1, y1), (x2, y2), (255, 165, 0), 2)
+
+        # Draw zones
+        self._draw_zones(annotated)
+
+        return annotated
+
+    def _is_near_instrument(self, person_bbox, instr_boxes, threshold=0.3) -> bool:
+        """
+        Cek apakah ada instrumen yang overlap atau sangat dekat dengan person.
+        Menggunakan IoU sederhana atau proximity check.
+        """
+        if len(instr_boxes) == 0:
+            return False
+
+        px1, py1, px2, py2 = person_bbox
+        p_area = (px2 - px1) * (py2 - py1)
+
+        for ib in instr_boxes:
+            ix1, iy1, ix2, iy2 = ib
+            # Intersection
+            inter_x1 = max(px1, ix1)
+            inter_y1 = max(py1, iy1)
+            inter_x2 = min(px2, ix2)
+            inter_y2 = min(py2, iy2)
+
+            if inter_x2 > inter_x1 and inter_y2 > inter_y1:
+                inter_area = (inter_x2 - inter_x1) * (inter_y2 - inter_y1)
+                i_area = (ix2 - ix1) * (iy2 - iy1)
+                union = p_area + i_area - inter_area
+                iou = inter_area / union if union > 0 else 0
+                if iou > threshold:
+                    return True
+
+        return False
+
+    def _draw_zones(self, frame: np.ndarray):
+        """Gambar polygon zone di frame (semi-transparan)."""
+        overlay = frame.copy()
+        zone_colors = {
+            "sanitizer": (0, 255, 0),    # hijau
+            "wastafel":  (255, 255, 0),  # kuning
+            "pintu":     (0, 0, 255),    # merah
+        }
+        for zone in self.zone_mgr.zones:
+            color = zone_colors.get(zone["tipe"], (128, 128, 128))
+            pts_shapely = list(zone["polygon"].exterior.coords)
+            pts = np.array([[int(x), int(y)] for x, y in pts_shapely[:-1]], np.int32)
+            cv2.fillPoly(overlay, [pts], color)
+            cv2.polylines(frame, [pts], True, color, 2)
+            # Label zona
+            cx = int(sum(p[0] for p in pts_shapely) / len(pts_shapely))
+            cy = int(sum(p[1] for p in pts_shapely) / len(pts_shapely))
+            cv2.putText(frame, zone["nama"], (cx - 30, cy),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        cv2.addWeighted(overlay, 0.2, frame, 0.8, 0, frame)
+
+    # (Callback on_event tidak lagi di dalam CameraProcessor, tapi di CameraManager)
+
+
+# ─── Global Camera Registry ───────────────────────────────────────────────────
+
+class CameraManager:
+    """Registry global semua CameraProcessor yang berjalan."""
+
+    def __init__(self):
+        self._cameras: dict[int, CameraProcessor] = {}
+        self._group_engines: dict[int, GroupComplianceEngine] = {}
+        self._lock = threading.Lock()
+
+    def _get_or_create_group_engine(self, group_id: int) -> GroupComplianceEngine:
+        if group_id not in self._group_engines:
+            self._group_engines[group_id] = GroupComplianceEngine(group_id, on_event=self._on_group_event)
+        return self._group_engines[group_id]
+
+    def _on_group_event(self, event_data: dict, frame):
+        """
+        Dipanggil oleh GroupComplianceEngine saat status grup (PATUH/TIDAK PATUH) terdeteksi.
+        Simpan snapshot + log ke database.
+        """
+        status = event_data["status"]
+        cam_id = event_data["camera_id"]
+        
+        # Cari nama kamera
+        camera_name = f"Camera {cam_id}"
+        proc = self._cameras.get(cam_id)
+        if proc:
+            camera_name = proc.nama
+
+        snap_path = save_snapshot(
+            frame,
+            person_id=event_data["person_id"],
+            status=status,
+            camera_name=camera_name,
+        )
+
+        try:
+            log_id = insert_monitoring_log(
+                person_id=event_data["person_id"],
+                group_id=event_data["group_id"],
+                camera_id=cam_id,
+                status=status,
+                membawa_instrumen=event_data["membawa_instrumen"],
+                aktivitas_cuci_tangan=event_data["aktivitas_cuci_tangan"],
+                snapshot_path=snap_path,
+                confidence=round(event_data["confidence"] * 100, 2),
+            )
+            print(f"[GroupCompliance] Grup {event_data['group_id']} | Log #{log_id}: {status.upper()}")
+        except Exception as e:
+            print(f"[GroupCompliance] Error simpan log: {e}")
+
+    def start_camera(self, camera_id: int, nama: str, source, group_id: int) -> bool:
+        with self._lock:
+            if camera_id in self._cameras and self._cameras[camera_id].is_running():
+                return False  # sudah jalan
+                
+            engine = self._get_or_create_group_engine(group_id)
+            proc = CameraProcessor(camera_id, nama, source, group_id, engine)
+            proc.start()
+            self._cameras[camera_id] = proc
+            update_camera_status(camera_id, True)
+            return True
+
+    def stop_camera(self, camera_id: int):
+        with self._lock:
+            proc = self._cameras.pop(camera_id, None)
+            if proc:
+                proc.stop()
+                
+    def start_group(self, group_id: int, cameras_data: list):
+        """Memulai semua kamera dalam satu grup."""
+        for cam in cameras_data:
+            self.start_camera(cam["id"], cam["nama_kamera"], cam["source"], group_id)
+            
+    def stop_group(self, group_id: int):
+        """Menghentikan semua kamera dalam satu grup."""
+        with self._lock:
+            to_stop = [cid for cid, proc in self._cameras.items() if proc.group_id == group_id]
+            for cid in to_stop:
+                proc = self._cameras.pop(cid)
+                proc.stop()
+            if group_id in self._group_engines:
+                del self._group_engines[group_id]
+
+    def stop_all(self):
+        with self._lock:
+            for proc in self._cameras.values():
+                proc.stop()
+            self._cameras.clear()
+            self._group_engines.clear()
+
+    def get_processor(self, camera_id: int) -> CameraProcessor | None:
+        return self._cameras.get(camera_id)
+
+    def is_running(self, camera_id: int) -> bool:
+        proc = self._cameras.get(camera_id)
+        return proc is not None and proc.is_running()
+
+    def running_cameras(self) -> list[int]:
+        return [cid for cid, p in self._cameras.items() if p.is_running()]
+
+
+# Singleton
+camera_manager = CameraManager()
