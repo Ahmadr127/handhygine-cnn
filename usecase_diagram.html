@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Usecase Diagram – Sistem Monitoring Kepatuhan Cuci Tangan</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      padding: 30px;
+    }
+    .page-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    .diagram-wrapper {
+      background: white;
+      border: 1.5px solid #999;
+      border-radius: 4px;
+      padding: 0;
+      position: relative;
+    }
+    .uc-label {
+      position: absolute;
+      top: 0;
+      left: 0;
+      font-size: 11px;
+      background: white;
+      border-right: 1.5px solid #999;
+      border-bottom: 1.5px solid #999;
+      padding: 2px 8px;
+      color: #333;
+    }
+    .caption {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 13px;
+      color: #222;
+    }
+  </style>
+</head>
+<body>
+  <div class="diagram-wrapper">
+    <span class="uc-label">uc usecase</span>
+    <svg xmlns="http://www.w3.org/2000/svg" width="900" height="620" viewBox="0 0 900 620">
+      <defs>
+        <marker id="arrow-dashed" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#444" />
+        </marker>
+        <marker id="arrow-dashed-rev" markerWidth="8" markerHeight="8" refX="2" refY="3" orient="auto">
+          <path d="M8,0 L8,6 L0,3 z" fill="#444" />
+        </marker>
+      </defs>
+
+      <!-- ================================================================
+           SYSTEM BOUNDARY
+           ================================================================ -->
+      <rect x="140" y="40" width="610" height="540" rx="14" ry="14"
+            fill="white" stroke="#555" stroke-width="1.5" />
+      <!-- System title -->
+      <text x="445" y="66" text-anchor="middle" font-family="Arial" font-size="13" font-weight="bold" fill="#333">
+        Sistem Monitoring Kepatuhan Cuci Tangan
+      </text>
+
+      <!-- ================================================================
+           ACTOR: Admin (left)
+           ================================================================ -->
+      <!-- head -->
+      <circle cx="65" cy="160" r="16" fill="none" stroke="#222" stroke-width="2"/>
+      <!-- body -->
+      <line x1="65" y1="176" x2="65" y2="228" stroke="#222" stroke-width="2"/>
+      <!-- arms -->
+      <line x1="38" y1="200" x2="92" y2="200" stroke="#222" stroke-width="2"/>
+      <!-- left leg -->
+      <line x1="65" y1="228" x2="42" y2="260" stroke="#222" stroke-width="2"/>
+      <!-- right leg -->
+      <line x1="65" y1="228" x2="88" y2="260" stroke="#222" stroke-width="2"/>
+      <!-- Actor label -->
+      <text x="65" y="280" text-anchor="middle" font-family="Arial" font-size="13" font-weight="bold" fill="#222">Admin</text>
+
+      <!-- ================================================================
+           ACTOR: Sistem AI (right)
+           ================================================================ -->
+      <!-- head -->
+      <circle cx="835" cy="330" r="16" fill="none" stroke="#222" stroke-width="2"/>
+      <!-- body -->
+      <line x1="835" y1="346" x2="835" y2="398" stroke="#222" stroke-width="2"/>
+      <!-- arms -->
+      <line x1="808" y1="370" x2="862" y2="370" stroke="#222" stroke-width="2"/>
+      <!-- left leg -->
+      <line x1="835" y1="398" x2="812" y2="430" stroke="#222" stroke-width="2"/>
+      <!-- right leg -->
+      <line x1="835" y1="398" x2="858" y2="430" stroke="#222" stroke-width="2"/>
+      <!-- Actor label -->
+      <text x="835" y="450" text-anchor="middle" font-family="Arial" font-size="13" font-weight="bold" fill="#222">Sistem AI</text>
+      <text x="835" y="466" text-anchor="middle" font-family="Arial" font-size="11" fill="#555">(AI Service)</text>
+
+      <!-- ================================================================
+           USE CASES – ovals with light-blue fill
+           ================================================================ -->
+
+      <!-- UC1: Login (top center-right) -->
+      <ellipse cx="640" cy="90" rx="82" ry="32" fill="#BFDBEE" stroke="#5B8DB0" stroke-width="1.5"/>
+      <text x="640" y="86" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#1a3a52">Login</text>
+      <text x="640" y="100" text-anchor="middle" font-family="Arial" font-size="10" fill="#1a3a52">/ Logout</text>
+
+      <!-- UC2: Kelola Grup Monitoring -->
+      <ellipse cx="310" cy="155" rx="105" ry="34" fill="#BFDBEE" stroke="#5B8DB0" stroke-width="1.5"/>
+      <text x="310" y="151" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#1a3a52">Kelola Grup</text>
+      <text x="310" y="165" text-anchor="middle" font-family="Arial" font-size="10" fill="#1a3a52">Monitoring</text>
+
+      <!-- UC3: Tambah Kamera -->
+      <ellipse cx="310" cy="265" rx="100" ry="34" fill="#BFDBEE" stroke="#5B8DB0" stroke-width="1.5"/>
+      <text x="310" y="261" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#1a3a52">Tambah</text>
+      <text x="310" y="275" text-anchor="middle" font-family="Arial" font-size="10" fill="#1a3a52">Kamera</text>
+
+      <!-- UC4: Scan USB Kamera (include of Tambah Kamera) -->
+      <ellipse cx="480" cy="265" rx="100" ry="34" fill="#BFDBEE" stroke="#5B8DB0" stroke-width="1.5"/>
+      <text x="480" y="261" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#1a3a52">Scan USB</text>
+      <text x="480" y="275" text-anchor="middle" font-family="Arial" font-size="10" fill="#1a3a52">Kamera</text>
+
+      <!-- UC5: Konfigurasi Zona -->
+      <ellipse cx="310" cy="370" rx="105" ry="34" fill="#BFDBEE" stroke="#5B8DB0" stroke-width="1.5"/>
+      <text x="310" y="366" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#1a3a52">Konfigurasi</text>
+      <text x="310" y="380" text-anchor="middle" font-family="Arial" font-size="10" fill="#1a3a52">Zona</text>
+
+      <!-- UC6: Mulai/Stop Monitoring -->
+      <ellipse cx="480" cy="155" rx="110" ry="34" fill="#BFDBEE" stroke="#5B8DB0" stroke-width="1.5"/>
+      <text x="480" y="151" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#1a3a52">Mulai / Stop</text>
+      <text x="480" y="165" text-anchor="middle" font-family="Arial" font-size="10" fill="#1a3a52">Monitoring</text>
+
+      <!-- UC7: Lihat Dashboard Real-time -->
+      <ellipse cx="310" cy="470" rx="110" ry="34" fill="#BFDBEE" stroke="#5B8DB0" stroke-width="1.5"/>
+      <text x="310" y="462" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#1a3a52">Lihat Dashboard</text>
+      <text x="310" y="476" text-anchor="middle" font-family="Arial" font-size="10" fill="#1a3a52">Real-time</text>
+
+      <!-- UC8: Lihat Log & Laporan -->
+      <ellipse cx="480" cy="470" rx="110" ry="34" fill="#BFDBEE" stroke="#5B8DB0" stroke-width="1.5"/>
+      <text x="480" y="462" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#1a3a52">Lihat Log &amp;</text>
+      <text x="480" y="476" text-anchor="middle" font-family="Arial" font-size="10" fill="#1a3a52">Laporan</text>
+
+      <!-- UC9: Filter Log (include of Lihat Log) -->
+      <ellipse cx="480" cy="548" rx="100" ry="30" fill="#BFDBEE" stroke="#5B8DB0" stroke-width="1.5"/>
+      <text x="480" y="545" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#1a3a52">Filter Log</text>
+      <text x="480" y="559" text-anchor="middle" font-family="Arial" font-size="10" fill="#1a3a52">&amp; Ekspor</text>
+
+      <!-- UC10: Deteksi Cuci Tangan YOLO -->
+      <ellipse cx="660" cy="265" rx="110" ry="36" fill="#BFDBEE" stroke="#5B8DB0" stroke-width="1.5"/>
+      <text x="660" y="258" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#1a3a52">Deteksi Cuci</text>
+      <text x="660" y="272" text-anchor="middle" font-family="Arial" font-size="10" fill="#1a3a52">Tangan (YOLO)</text>
+      <text x="660" y="284" text-anchor="middle" font-family="Arial" font-size="9" fill="#3a6a8a">&amp; Tracking</text>
+
+      <!-- UC11: Catat Kepatuhan -->
+      <ellipse cx="660" cy="380" rx="100" ry="34" fill="#BFDBEE" stroke="#5B8DB0" stroke-width="1.5"/>
+      <text x="660" y="376" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#1a3a52">Catat</text>
+      <text x="660" y="390" text-anchor="middle" font-family="Arial" font-size="10" fill="#1a3a52">Kepatuhan</text>
+
+      <!-- UC12: Simpan Snapshot -->
+      <ellipse cx="660" cy="470" rx="100" ry="34" fill="#BFDBEE" stroke="#5B8DB0" stroke-width="1.5"/>
+      <text x="660" y="466" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#1a3a52">Simpan</text>
+      <text x="660" y="480" text-anchor="middle" font-family="Arial" font-size="10" fill="#1a3a52">Snapshot</text>
+
+      <!-- ================================================================
+           ASSOCIATIONS (solid lines)
+           ================================================================ -->
+
+      <!-- Admin → Login -->
+      <line x1="81" y1="155" x2="558" y2="95" stroke="#444" stroke-width="1.5"/>
+
+      <!-- Admin → Kelola Grup Monitoring -->
+      <line x1="81" y1="170" x2="205" y2="160" stroke="#444" stroke-width="1.5"/>
+
+      <!-- Admin → Tambah Kamera -->
+      <line x1="81" y1="200" x2="210" y2="265" stroke="#444" stroke-width="1.5"/>
+
+      <!-- Admin → Konfigurasi Zona -->
+      <line x1="76" y1="220" x2="205" y2="365" stroke="#444" stroke-width="1.5"/>
+
+      <!-- Admin → Mulai/Stop Monitoring -->
+      <line x1="81" y1="180" x2="370" y2="155" stroke="#444" stroke-width="1.5"/>
+
+      <!-- Admin → Lihat Dashboard Real-time -->
+      <line x1="76" y1="235" x2="200" y2="462" stroke="#444" stroke-width="1.5"/>
+
+      <!-- Admin → Lihat Log & Laporan -->
+      <line x1="76" y1="240" x2="370" y2="462" stroke="#444" stroke-width="1.5"/>
+
+      <!-- Sistem AI → Mulai/Stop Monitoring -->
+      <line x1="835" y1="314" x2="590" y2="165" stroke="#444" stroke-width="1.5"/>
+
+      <!-- Sistem AI → Deteksi Cuci Tangan -->
+      <line x1="819" y1="330" x2="770" y2="295" stroke="#444" stroke-width="1.5"/>
+
+      <!-- Sistem AI → Catat Kepatuhan -->
+      <line x1="819" y1="355" x2="760" y2="380" stroke="#444" stroke-width="1.5"/>
+
+      <!-- Sistem AI → Simpan Snapshot -->
+      <line x1="819" y1="375" x2="760" y2="460" stroke="#444" stroke-width="1.5"/>
+
+      <!-- ================================================================
+           INCLUDE / EXTEND (dashed lines with arrows)
+           ================================================================ -->
+
+      <!-- Tambah Kamera --«include»--> Scan USB Kamera -->
+      <line x1="410" y1="265" x2="380" y2="265" stroke="#444" stroke-width="1.3"
+            stroke-dasharray="6,4" marker-end="url(#arrow-dashed)"/>
+      <text x="393" y="258" text-anchor="middle" font-family="Arial" font-size="10" font-style="italic" fill="#444">«include»</text>
+
+      <!-- Lihat Log «include» Filter Log -->
+      <line x1="480" y1="504" x2="480" y2="518" stroke="#444" stroke-width="1.3"
+            stroke-dasharray="6,4" marker-end="url(#arrow-dashed)"/>
+      <text x="530" y="514" text-anchor="middle" font-family="Arial" font-size="10" font-style="italic" fill="#444">«include»</text>
+
+      <!-- Deteksi Cuci Tangan --«include»--> Catat Kepatuhan -->
+      <line x1="660" y1="301" x2="660" y2="346" stroke="#444" stroke-width="1.3"
+            stroke-dasharray="6,4" marker-end="url(#arrow-dashed)"/>
+      <text x="700" y="327" text-anchor="middle" font-family="Arial" font-size="10" font-style="italic" fill="#444">«include»</text>
+
+      <!-- Catat Kepatuhan --«extend»--> Simpan Snapshot -->
+      <line x1="660" y1="414" x2="660" y2="436" stroke="#444" stroke-width="1.3"
+            stroke-dasharray="6,4" marker-end="url(#arrow-dashed)"/>
+      <text x="700" y="428" text-anchor="middle" font-family="Arial" font-size="10" font-style="italic" fill="#444">«extend»</text>
+
+      <!-- Tambah Kamera --«extend»--> Konfigurasi Zona -->
+      <line x1="310" y1="299" x2="310" y2="336" stroke="#444" stroke-width="1.3"
+            stroke-dasharray="6,4" marker-end="url(#arrow-dashed)"/>
+      <text x="352" y="322" text-anchor="middle" font-family="Arial" font-size="10" font-style="italic" fill="#444">«extend»</text>
+
+    </svg>
+  </div>
+
+  <p class="caption"><strong>Gambar 4.X. Usecase Diagram Sistem Monitoring Kepatuhan Cuci Tangan</strong></p>
+
+  <div style="margin-top: 24px; max-width:900px; font-size:13px; line-height:1.8; color:#333; background:#fff; border:1px solid #ddd; padding:16px; border-radius:6px;">
+    <p>
+      Pada diagram di atas terdapat dua aktor yaitu <strong>Admin</strong> dan <strong>Sistem AI (AI Service)</strong>.
+      Aktor <strong>Admin</strong> dapat melakukan: <em>Login/Logout</em>, mengelola grup monitoring (tambah, lihat, hapus grup),
+      menambah kamera (termasuk scan USB kamera), mengkonfigurasi zona deteksi (sanitizer, wastafel, pintu),
+      memulai atau menghentikan sesi monitoring, serta melihat dashboard real-time dan laporan log kepatuhan (dengan fitur filter &amp; ekspor).
+      Aktor <strong>Sistem AI</strong> secara otomatis menjalankan proses deteksi cuci tangan berbasis YOLOv8 &amp; ByteTrack,
+      mencatat hasil kepatuhan ke database, dan menyimpan snapshot/screenshot kejadian yang terdeteksi.
+    </p>
+  </div>
+</body>
+</html>

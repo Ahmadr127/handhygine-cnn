@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Sequence & Activity Diagrams – Sistem Monitoring Kepatuhan Cuci Tangan</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#e4e9ef;color:#222;min-height:100vh}
+header{background:linear-gradient(135deg,#1e4d78,#2c7bb6);color:#fff;padding:16px 24px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+header h1{font-size:17px;margin-bottom:3px}
+header p{font-size:11px;opacity:.75}
+nav{background:#f7f7f7;border-bottom:2px solid #ccc;padding:10px 16px;display:flex;flex-wrap:wrap;gap:7px}
+.tb{padding:7px 13px;border:1.5px solid #b0b0b0;background:#fff;cursor:pointer;border-radius:4px;font-size:11.5px;font-family:Arial,sans-serif;transition:all .15s}
+.tb:hover{background:#d8ecf8;border-color:#4A8AAF}
+.tb.on{background:#1e4d78;color:#fff;border-color:#1e4d78}
+main{padding:20px;max-width:1800px;margin:0 auto}
+.sec{display:none}
+.sec.on{display:block}
+.sct{font-size:15px;font-weight:bold;margin-bottom:14px;padding:10px 16px;background:#fff;border-left:4px solid #1e4d78;border-radius:0 4px 4px 0;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.pair{display:flex;gap:18px;flex-wrap:wrap}
+.dbox{background:#fff;border:1px solid #dde3e8;border-radius:6px;padding:16px;flex:1;min-width:320px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.dbox h3{font-size:12px;color:#666;text-align:center;margin-bottom:10px;letter-spacing:.3px}
+.cap{text-align:center;margin-top:10px;font-size:12px;color:#333;font-weight:bold}
+.sx{overflow-x:auto;overflow-y:visible}
+</style>
+</head>
+<body>
+<header>
+  <h1>📊 Sequence &amp; Activity Diagrams</h1>
+  <p>Sistem Monitoring Kepatuhan Cuci Tangan · YOLOv8 · ByteTrack · Laravel · PostgreSQL</p>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+
+<script>
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+const e = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ============================================================
+   SEQUENCE DIAGRAM RENDERER
+   ============================================================
+   participants: [{label, type}]  type: 'actor'|'comp'|'db'
+   messages:    [{from, to, label, isReturn?, isSelf?}]
+*/
+function seqSVG({name, participants, messages}){
+  const PS=158, FX=88, HH=110, MH=60, PB=50, BW=128, BH=44;
+  const N=participants.length, M=messages.length;
+  const W=FX*2+(N-1)*PS, H=HH+M*MH+PB;
+  const px=i=>FX+i*PS;
+  const my=i=>HH+(i+.5)*MH;
+  let s='';
+  const a=x=>s+=x;
+
+  a(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`);
+  a(`<rect x=".5" y=".5" width="${W-1}" height="${H-1}" fill="white" stroke="#999" stroke-width="1.5"/>`);
+  const tw=22+name.length*6.3;
+  a(`<rect x="0" y="0" width="${tw}" height="20" fill="white" stroke="#999" stroke-width="1"/>`);
+  a(`<text x="6" y="14" font-family="Arial" font-size="11" fill="#333">sd ${e(name)}</text>`);
+  a(`<defs>
+    <marker id="mS_${name}" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><polygon points="0,0 0,9 9,4.5" fill="#333"/></marker>
+    <marker id="mR_${name}" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><polygon points="0,0 0,9 9,4.5" fill="#999"/></marker>
+  </defs>`);
+
+  participants.forEach((p,i)=>{
+    const cx=px(i);
+    if(p.type==='actor'){
+      const hy=28,r=12;
+      a(`<circle cx="${cx}" cy="${hy}" r="${r}" fill="none" stroke="#333" stroke-width="1.5"/>`);
+      a(`<line x1="${cx}" y1="${hy+r}" x2="${cx}" y2="${hy+r+28}" stroke="#333" stroke-width="1.5"/>`);
+      a(`<line x1="${cx-17}" y1="${hy+r+14}" x2="${cx+17}" y2="${hy+r+14}" stroke="#333" stroke-width="1.5"/>`);
+      a(`<line x1="${cx}" y1="${hy+r+28}" x2="${cx-13}" y2="${hy+r+47}" stroke="#333" stroke-width="1.5"/>`);
+      a(`<line x1="${cx}" y1="${hy+r+28}" x2="${cx+13}" y2="${hy+r+47}" stroke="#333" stroke-width="1.5"/>`);
+      p.label.split('\n').forEach((l,li)=>a(`<text x="${cx}" y="${hy+r+62+li*14}" text-anchor="middle" font-family="Arial" font-size="11" font-weight="bold" fill="#222">${e(l)}</text>`));
+      a(`<line x1="${cx}" y1="${HH}" x2="${cx}" y2="${H-PB+18}" stroke="#bbb" stroke-width="1" stroke-dasharray="5,4"/>`);
+    } else if(p.type==='db'){
+      const bx=cx-BW/2,by=26,eh=8;
+      a(`<rect x="${bx}" y="${by+eh}" width="${BW}" height="${BH}" fill="#e0f0f8" stroke="#4A8AAF" stroke-width="1.5"/>`);
+      a(`<ellipse cx="${cx}" cy="${by+eh}" rx="${BW/2}" ry="${eh}" fill="#c4dcf0" stroke="#4A8AAF" stroke-width="1.5"/>`);
+      a(`<ellipse cx="${cx}" cy="${by+BH+eh}" rx="${BW/2}" ry="${eh}" fill="#e0f0f8" stroke="#4A8AAF" stroke-width="1"/>`);
+      p.label.split('\n').forEach((l,li,arr)=>{
+        const ly=by+eh+BH/2+(li-(arr.length-1)/2)*13;
+        a(`<text x="${cx}" y="${ly}" text-anchor="middle" font-family="Arial" font-size="10" fill="#1a3a52">${e(l)}</text>`);
+      });
+      a(`<line x1="${cx}" y1="${by+BH+eh*2+1}" x2="${cx}" y2="${H-PB+18}" stroke="#bbb" stroke-width="1" stroke-dasharray="5,4"/>`);
+    } else {
+      const bx=cx-BW/2,by=26;
+      a(`<rect x="${bx}" y="${by}" width="${BW}" height="${BH}" fill="#BFDBEE" stroke="#4A8AAF" stroke-width="1.5" rx="3"/>`);
+      p.label.split('\n').forEach((l,li,arr)=>{
+        const ly=by+BH/2+(li-(arr.length-1)/2)*13;
+        a(`<text x="${cx}" y="${ly}" text-anchor="middle" font-family="Arial" font-size="10" font-weight="bold" fill="#1a3a52">${e(l)}</text>`);
+      });
+      a(`<line x1="${cx}" y1="${by+BH}" x2="${cx}" y2="${H-PB+18}" stroke="#bbb" stroke-width="1" stroke-dasharray="5,4"/>`);
+    }
+  });
+
+  messages.forEach((msg,i)=>{
+    const fx=px(msg.from),tx=px(msg.to),y=my(i);
+    const isR=msg.isReturn||false;
+    const clr=isR?'#888':'#333', dash=isR?'6,3':'none';
+    const mk=isR?`url(#mR_${name})`:`url(#mS_${name})`;
+    if(msg.from===msg.to){
+      a(`<path d="M${fx+5},${y} C${fx+50},${y-5} ${fx+50},${y+22} ${fx+5},${y+22}" fill="none" stroke="${clr}" stroke-width="1.3" stroke-dasharray="${dash}" marker-end="${mk}"/>`);
+      a(`<text x="${fx+55}" y="${y+13}" font-family="Arial" font-size="10" fill="#333">${e(msg.label)}</text>`);
+    } else {
+      const dir=fx<tx?-1:1, ex=tx+dir*7;
+      a(`<line x1="${fx}" y1="${y}" x2="${ex}" y2="${y}" stroke="${clr}" stroke-width="1.3" stroke-dasharray="${dash}" marker-end="${mk}"/>`);
+      const mx=(fx+tx)/2;
+      a(`<text x="${mx}" y="${y-6}" text-anchor="middle" font-family="Arial" font-size="10" fill="#333">${e(msg.label)}</text>`);
+    }
+  });
+  a(`</svg>`); return s;
+}
+
+/* ============================================================
+   ACTIVITY DIAGRAM RENDERER
+   ============================================================
+   lanes: [string]
+   steps: [{id, type, lane, label}]  type: start|action|decision|end
+   flows: [{from, to, label?, side?}]  side=true: exit from side of diamond
+*/
+function actSVG({name, lanes, steps, flows}){
+  const LW=225, LHH=42, SH=74, PBM=30, AW=178, AH=48, ARX=14;
+  const NL=lanes.length, NS=steps.length;
+  const W=NL*LW+2, H=LHH+20+NS*SH+PBM;
+  const lcx=i=>1+i*LW+LW/2;
+
+  const pos={};
+  steps.forEach((st,i)=>{pos[st.id]={x:lcx(st.lane),y:20+LHH+(i+.5)*SH};});
+
+  let s='';
+  const a=x=>s+=x;
+  a(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`);
+  a(`<rect x=".5" y=".5" width="${W-1}" height="${H-1}" fill="white" stroke="#999" stroke-width="1.5"/>`);
+  const tw=22+name.length*6.3;
+  a(`<rect x="0" y="0" width="${tw}" height="20" fill="white" stroke="#999" stroke-width="1"/>`);
+  a(`<text x="6" y="14" font-family="Arial" font-size="11" fill="#333">act ${e(name)}</text>`);
+  a(`<defs><marker id="aA_${name}" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><polygon points="0,0 0,9 9,4.5" fill="#333"/></marker></defs>`);
+
+  lanes.forEach((ln,i)=>{
+    const lx=1+i*LW;
+    a(`<rect x="${lx}" y="20" width="${LW}" height="${LHH}" fill="#eeeeee" stroke="#bbb" stroke-width="1"/>`);
+    a(`<text x="${lcx(i)}" y="${20+LHH/2+5}" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#333">${e(ln)}</text>`);
+  });
+  for(let i=1;i<NL;i++){
+    const dx=1+i*LW;
+    a(`<line x1="${dx}" y1="${20+LHH}" x2="${dx}" y2="${H-1}" stroke="#ccc" stroke-width="1.5" stroke-dasharray="6,4"/>`);
+  }
+
+  steps.forEach(st=>{
+    const {x,y}=pos[st.id];
+    if(st.type==='start'){
+      a(`<circle cx="${x}" cy="${y}" r="13" fill="#333"/>`);
+    } else if(st.type==='end'){
+      a(`<circle cx="${x}" cy="${y}" r="17" fill="none" stroke="#333" stroke-width="2.5"/>`);
+      a(`<circle cx="${x}" cy="${y}" r="11" fill="#333"/>`);
+    } else if(st.type==='action'){
+      const bx=x-AW/2,by=y-AH/2;
+      a(`<rect x="${bx}" y="${by}" width="${AW}" height="${AH}" fill="#FFFDE7" stroke="#bbb" stroke-width="1.5" rx="${ARX}"/>`);
+      const lines=(st.label||'').split('\n');
+      const lh=16,ly0=y-(lines.length-1)*lh/2;
+      lines.forEach((l,li)=>a(`<text x="${x}" y="${ly0+li*lh}" text-anchor="middle" font-family="Arial" font-size="11" fill="#222">${e(l)}</text>`));
+    } else if(st.type==='decision'){
+      const dw=96,dh=50;
+      a(`<polygon points="${x},${y-dh/2} ${x+dw/2},${y} ${x},${y+dh/2} ${x-dw/2},${y}" fill="#FFFDE7" stroke="#bbb" stroke-width="1.5"/>`);
+      const lines=(st.label||'').split('\n');
+      const lh=14,ly0=y-(lines.length-1)*lh/2;
+      lines.forEach((l,li)=>a(`<text x="${x}" y="${ly0+li*lh}" text-anchor="middle" font-family="Arial" font-size="10" fill="#222">${e(l)}</text>`));
+    }
+  });
+
+  const mk=`url(#aA_${name})`;
+  flows.forEach(fl=>{
+    if(!pos[fl.from]||!pos[fl.to]) return;
+    const {x:fx,y:fy}=pos[fl.from],{x:tx,y:ty}=pos[fl.to];
+    const fst=steps.find(s=>s.id===fl.from),tst=steps.find(s=>s.id===fl.to);
+    const lbl=fl.label||'';
+
+    let sy=fy,ey=ty,sx=fx,ex=tx;
+    // Start offsets
+    if(fl.side){sy=fy;sx=(fl.sideLeft?fx-48:fx+48);}
+    else if(fst.type==='start')sy+=13;
+    else if(fst.type==='action')sy+=AH/2;
+    else if(fst.type==='decision')sy+=25;
+    // End offsets
+    if(tst.type==='end')ey-=17;
+    else if(tst.type==='action')ey-=AH/2;
+    else if(tst.type==='decision')ey-=25;
+    else if(tst.type==='start')ey-=13;
+
+    const backward=(ty < fy-SH*0.6);
+
+    if(Math.abs(sx-ex)<5 && !backward){
+      a(`<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey-7}" stroke="#333" stroke-width="1.3" marker-end="${mk}"/>`);
+      if(lbl)a(`<text x="${sx+8}" y="${(sy+ey)/2}" font-family="Arial" font-size="10" font-style="italic" fill="#555">${e(lbl)}</text>`);
+    } else if(backward){
+      const loopX=Math.min(sx,ex)-AW/2-22;
+      a(`<polyline points="${sx},${sy} ${loopX},${sy} ${loopX},${ey} ${ex+7},${ey}" fill="none" stroke="#333" stroke-width="1.3" marker-end="${mk}"/>`);
+      if(lbl)a(`<text x="${loopX-6}" y="${(sy+ey)/2}" text-anchor="end" font-family="Arial" font-size="10" font-style="italic" fill="#555">${e(lbl)}</text>`);
+    } else {
+      const midY=(sy+ey)/2;
+      a(`<polyline points="${sx},${sy} ${sx},${midY} ${ex},${midY} ${ex},${ey-7}" fill="none" stroke="#333" stroke-width="1.3" marker-end="${mk}"/>`);
+      if(lbl)a(`<text x="${(sx+ex)/2}" y="${midY-5}" text-anchor="middle" font-family="Arial" font-size="10" font-style="italic" fill="#555">${e(lbl)}</text>`);
+    }
+  });
+  a(`</svg>`); return s;
+}
+
+/* ============================================================
+   USE CASE DATA
+   ============================================================ */
+const UCS=[
+
+/* ──────────────── UC1: LOGIN ──────────────── */
+{
+  title:'UC1: Login / Logout', shortTitle:'Login',
+  figSeq:4, figAct:5,
+  seq:{
+    name:'login',
+    participants:[
+      {label:'Admin',type:'actor'},
+      {label:'Interface\nLogin',type:'comp'},
+      {label:'AuthController',type:'comp'},
+      {label:'tabel: users',type:'db'}
+    ],
+    messages:[
+      {from:0,to:1,label:'1. Buka halaman /login()'},
+      {from:1,to:0,label:'2. Tampilkan form login()',isReturn:true},
+      {from:0,to:1,label:'3. Input username & password'},
+      {from:1,to:2,label:'4. authenticate(credentials)'},
+      {from:2,to:3,label:'5. SELECT * FROM users\nWHERE username = ?'},
+      {from:3,to:2,label:'6. return User | null',isReturn:true},
+      {from:2,to:1,label:'7. [valid] createSession(), redirect dashboard',isReturn:true},
+      {from:1,to:0,label:'8. Redirect Dashboard / Tampilkan Error',isReturn:true}
+    ]
+  },
+  act:{
+    name:'login',
+    lanes:['Admin','Sistem'],
+    steps:[
+      {id:'s0',type:'start',lane:0},
+      {id:'s1',type:'action',lane:0,label:'Buka Halaman Login'},
+      {id:'s2',type:'action',lane:1,label:'Tampilkan Form Login'},
+      {id:'s3',type:'action',lane:0,label:'Input Username\n& Password'},
+      {id:'s4',type:'action',lane:1,label:'Validasi Kredensial\nke Database'},
+      {id:'s5',type:'decision',lane:1,label:'Valid?'},
+      {id:'s6',type:'action',lane:1,label:'Buat Session\n& Redirect Dashboard'},
+      {id:'s7',type:'action',lane:1,label:'Tampilkan Pesan Error'},
+      {id:'s8',type:'end',lane:1}
+    ],
+    flows:[
+      {from:'s0',to:'s1'},
+      {from:'s1',to:'s2'},
+      {from:'s2',to:'s3'},
+      {from:'s3',to:'s4'},
+      {from:'s4',to:'s5'},
+      {from:'s5',to:'s6',label:'[Ya]'},
+      {from:'s5',to:'s7',label:'[Tidak]',side:true,sideLeft:false},
+      {from:'s7',to:'s3',label:'Ulangi'},
+      {from:'s6',to:'s8'}
+    ]
+  }
+},
+
+/* ──────────────── UC2: KELOLA GRUP ──────────────── */
+{
+  title:'UC2: Kelola Grup Monitoring', shortTitle:'Kelola Grup Monitoring',
+  figSeq:6, figAct:7,
+  seq:{
+    name:'kelola grup',
+    participants:[
+      {label:'Admin',type:'actor'},
+      {label:'Interface\nGrup',type:'comp'},
+      {label:'GroupController',type:'comp'},
+      {label:'tabel:\nmonitoring_groups',type:'db'}
+    ],
+    messages:[
+      {from:0,to:1,label:'1. Buka halaman /groups()'},
+      {from:1,to:2,label:'2. index()'},
+      {from:2,to:3,label:'3. SELECT id, nama_grup, deskripsi,\nlokasi, aktif FROM monitoring_groups'},
+      {from:3,to:2,label:'4. return Collection<MonitoringGroup>',isReturn:true},
+      {from:2,to:1,label:'5. render groups.index (daftar grup)',isReturn:true},
+      {from:0,to:1,label:'6. Input nama_grup, deskripsi, lokasi'},
+      {from:1,to:2,label:'7. store(nama_grup, deskripsi, lokasi)'},
+      {from:2,to:3,label:'8. INSERT INTO monitoring_groups\n(nama_grup, deskripsi, lokasi)'},
+      {from:3,to:2,label:'9. return MonitoringGroup (id baru)',isReturn:true},
+      {from:2,to:1,label:'10. redirect /groups + flash sukses',isReturn:true}
+    ]
+  },
+  act:{
+    name:'kelola grup',
+    lanes:['Admin','Sistem'],
+    steps:[
+      {id:'s0',type:'start',lane:0},
+      {id:'s1',type:'action',lane:0,label:'Buka Halaman\nGrup Monitoring'},
+      {id:'s2',type:'action',lane:1,label:'Tampilkan Daftar\nGrup Monitoring'},
+      {id:'s3',type:'action',lane:0,label:'Input Nama, Deskripsi\n& Lokasi Grup'},
+      {id:'s4',type:'action',lane:0,label:'Klik Tombol Simpan'},
+      {id:'s5',type:'action',lane:1,label:'Validasi Data\nGrup'},
+      {id:'s6',type:'action',lane:1,label:'Simpan ke Database'},
+      {id:'s7',type:'action',lane:1,label:'Redirect + Tampilkan\nPesan Sukses'},
+      {id:'s8',type:'end',lane:1}
+    ],
+    flows:[
+      {from:'s0',to:'s1'},{from:'s1',to:'s2'},{from:'s2',to:'s3'},
+      {from:'s3',to:'s4'},{from:'s4',to:'s5'},{from:'s5',to:'s6'},
+      {from:'s6',to:'s7'},{from:'s7',to:'s8'}
+    ]
+  }
+},
+
+/* ──────────────── UC3: TAMBAH KAMERA (+ UC4: SCAN USB) ──────────────── */
+{
+  title:'UC3+UC4: Tambah Kamera & Scan USB', shortTitle:'Tambah Kamera',
+  figSeq:8, figAct:9,
+  seq:{
+    name:'tambah kamera',
+    participants:[
+      {label:'Admin',type:'actor'},
+      {label:'Interface\nKamera',type:'comp'},
+      {label:'CameraController',type:'comp'},
+      {label:'AI Service\n(FastAPI)',type:'comp'},
+      {label:'tabel: cameras',type:'db'}
+    ],
+    messages:[
+      {from:0,to:1,label:'1. Buka halaman /cameras()'},
+      {from:1,to:2,label:'2. index()'},
+      {from:2,to:4,label:'3. SELECT id, nama_kamera, tipe,\nsource, aktif FROM cameras'},
+      {from:4,to:2,label:'4. return Collection<Camera>',isReturn:true},
+      {from:2,to:1,label:'5. render cameras.index',isReturn:true},
+      {from:0,to:1,label:'6. Klik tombol "Scan USB"'},
+      {from:1,to:2,label:'7. scanUsb()'},
+      {from:2,to:3,label:'8. GET /api/cameras/scan/usb'},
+      {from:3,to:2,label:'9. return [{index, label}]',isReturn:true},
+      {from:2,to:1,label:'10. Tampilkan pilihan kamera USB',isReturn:true},
+      {from:0,to:1,label:'11. Pilih kamera, isi nama_kamera & tipe, Submit'},
+      {from:1,to:2,label:'12. store(nama_kamera, tipe, source)'},
+      {from:2,to:4,label:'13. INSERT INTO cameras\n(nama_kamera, tipe, source, group_id)'},
+      {from:4,to:2,label:'14. return Camera (id baru)',isReturn:true},
+      {from:2,to:3,label:'15. POST /api/cameras (sync AI Service)'},
+      {from:3,to:2,label:'16. return {id, status: ok}',isReturn:true},
+      {from:2,to:1,label:'17. redirect /cameras + flash sukses',isReturn:true}
+    ]
+  },
+  act:{
+    name:'tambah kamera',
+    lanes:['Admin','Sistem'],
+    steps:[
+      {id:'s0',type:'start',lane:0},
+      {id:'s1',type:'action',lane:0,label:'Buka Halaman\nManajemen Kamera'},
+      {id:'s2',type:'action',lane:1,label:'Tampilkan Daftar\nKamera Terdaftar'},
+      {id:'s3',type:'action',lane:0,label:'Klik Tombol\n"Scan USB"'},
+      {id:'s4',type:'action',lane:1,label:'Query AI Service\n(GET /scan/usb)'},
+      {id:'s5',type:'action',lane:1,label:'Tampilkan Pilihan\nKamera USB'},
+      {id:'s6',type:'action',lane:0,label:'Pilih Kamera &\nIsi Form Data'},
+      {id:'s7',type:'action',lane:0,label:'Klik Tombol\nTambah Kamera'},
+      {id:'s8',type:'action',lane:1,label:'Validasi & Simpan\nke Database'},
+      {id:'s9',type:'action',lane:1,label:'Sinkronisasi\nke AI Service'},
+      {id:'s10',type:'action',lane:1,label:'Redirect + Pesan\nSukses'},
+      {id:'s11',type:'end',lane:1}
+    ],
+    flows:[
+      {from:'s0',to:'s1'},{from:'s1',to:'s2'},{from:'s2',to:'s3'},
+      {from:'s3',to:'s4'},{from:'s4',to:'s5'},{from:'s5',to:'s6'},
+      {from:'s6',to:'s7'},{from:'s7',to:'s8'},{from:'s8',to:'s9'},
+      {from:'s9',to:'s10'},{from:'s10',to:'s11'}
+    ]
+  }
+},
+
+/* ──────────────── UC5: KONFIGURASI ZONA ──────────────── */
+{
+  title:'UC5: Konfigurasi Zona', shortTitle:'Konfigurasi Zona',
+  figSeq:10, figAct:11,
+  seq:{
+    name:'konfigurasi zona',
+    participants:[
+      {label:'Admin',type:'actor'},
+      {label:'Interface\nZona',type:'comp'},
+      {label:'CameraController',type:'comp'},
+      {label:'AI Service\n(FastAPI)',type:'comp'},
+      {label:'tabel: zones',type:'db'}
+    ],
+    messages:[
+      {from:0,to:1,label:'1. Buka halaman /cameras/{id}/zones'},
+      {from:1,to:2,label:'2. zones(Camera $camera)'},
+      {from:2,to:4,label:'3. SELECT id, nama_zona, tipe_zona,\npolygon_points FROM zones\nWHERE camera_id = ?'},
+      {from:4,to:2,label:'4. return Collection<Zone>',isReturn:true},
+      {from:2,to:1,label:'5. render cameras.zones + canvas',isReturn:true},
+      {from:0,to:1,label:'6. Gambar polygon zona pada canvas'},
+      {from:0,to:1,label:'7. Pilih tipe_zona, input nama_zona, Submit'},
+      {from:1,to:2,label:'8. storeZone(nama_zona, tipe_zona, polygon_points[])'},
+      {from:2,to:4,label:'9. INSERT INTO zones\n(group_id, camera_id, nama_zona,\ntipe_zona, polygon_points)'},
+      {from:4,to:2,label:'10. return Zone (id baru)',isReturn:true},
+      {from:2,to:3,label:'11. POST /api/cameras/{id}/zones (sync AI)'},
+      {from:3,to:2,label:'12. return {success: true}',isReturn:true},
+      {from:2,to:1,label:'13. return JSON {success: true, zone}',isReturn:true}
+    ]
+  },
+  act:{
+    name:'konfigurasi zona',
+    lanes:['Admin','Sistem'],
+    steps:[
+      {id:'s0',type:'start',lane:0},
+      {id:'s1',type:'action',lane:0,label:'Buka Halaman\nKonfigurasi Zona'},
+      {id:'s2',type:'action',lane:1,label:'Tampilkan Canvas\nFrame + Zona Existing'},
+      {id:'s3',type:'action',lane:0,label:'Gambar Polygon\nPada Canvas Kamera'},
+      {id:'s4',type:'action',lane:0,label:'Pilih Tipe Zona\n(sanitizer/wastafel/pintu)'},
+      {id:'s5',type:'action',lane:0,label:'Input Nama Zona\n& Klik Simpan'},
+      {id:'s6',type:'action',lane:1,label:'Validasi Data Zona\n(min. 3 titik polygon)'},
+      {id:'s7',type:'action',lane:1,label:'Simpan ke Database\n& Sinkronisasi AI Service'},
+      {id:'s8',type:'action',lane:1,label:'Tampilkan Zona\nBerhasil Disimpan'},
+      {id:'s9',type:'end',lane:1}
+    ],
+    flows:[
+      {from:'s0',to:'s1'},{from:'s1',to:'s2'},{from:'s2',to:'s3'},
+      {from:'s3',to:'s4'},{from:'s4',to:'s5'},{from:'s5',to:'s6'},
+      {from:'s6',to:'s7'},{from:'s7',to:'s8'},{from:'s8',to:'s9'}
+    ]
+  }
+},
+
+/* ──────── UC6+UC7: DASHBOARD (Mulai/Stop Monitoring + Live Feed) ──────── */
+// Keduanya ada di halaman yang SAMA (dashboard.blade.php)
+// toggleCamera() memanggil POST /api/cameras/{id}/start LALU buka WebSocket
+{
+  title:'UC6+UC7: Dashboard – Mulai Monitoring & Live Feed', shortTitle:'Dashboard Monitoring',
+  figSeq:12, figAct:13,
+  seq:{
+    name:'dashboard monitoring',
+    participants:[
+      {label:'Admin',type:'actor'},
+      {label:'Dashboard\n(browser)',type:'comp'},
+      {label:'DashboardController',type:'comp'},
+      {label:'AI Service\n(FastAPI/WS)',type:'comp'},
+      {label:'tabel: monitoring_groups\n+ cameras\n+ monitoring_logs',type:'db'}
+    ],
+    messages:[
+      {from:0,to:1,label:'1. GET / (buka halaman Dashboard)'},
+      {from:1,to:2,label:'2. index(request)'},
+      {from:2,to:4,label:'3. SELECT * FROM monitoring_groups\nWITH cameras'},
+      {from:4,to:2,label:'4. return groups + selected_group',isReturn:true},
+      {from:2,to:4,label:'5. COUNT monitoring_logs\nWHERE DATE(waktu) = today'},
+      {from:4,to:2,label:'6. return stats (patuh, tidak, persen)',isReturn:true},
+      {from:2,to:4,label:'7. SELECT monitoring_logs\nORDER BY waktu DESC LIMIT 10'},
+      {from:4,to:2,label:'8. return recent_logs',isReturn:true},
+      {from:2,to:1,label:'9. render dashboard.blade.php\n(grid 4 slot + stats + log)',isReturn:true},
+      {from:0,to:1,label:'10. Klik tombol "▶ Connect" pada slot kamera'},
+      {from:1,to:3,label:'11. POST /api/cameras/{id}/start\n(start kamera di AI Service)'},
+      {from:3,to:1,label:'12. return {success: true}',isReturn:true},
+      {from:1,to:3,label:'13. new WebSocket(ws://AI_SERVICE/ws/stream/{id})'},
+      {from:3,to:1,label:'14. onmessage: {frame: base64JPEG, detections:[]}',isReturn:true},
+      {from:1,to:0,label:'15. Render img.src = JPEG + status LIVE + FPS',isReturn:true},
+      {from:0,to:1,label:'16. Klik tombol "⏹ Stop"'},
+      {from:1,to:3,label:'17. ws.close() + POST /api/cameras/{id}/stop'},
+      {from:3,to:1,label:'18. return success',isReturn:true},
+      {from:1,to:0,label:'19. Reset slot ke status IDLE',isReturn:true}
+    ]
+  },
+  act:{
+    name:'dashboard monitoring',
+    lanes:['Admin','Sistem (Dashboard)'],
+    steps:[
+      {id:'s0',type:'start',lane:0},
+      {id:'s1',type:'action',lane:0,label:'Buka Halaman\nDashboard (GET /)'},
+      {id:'s2',type:'action',lane:1,label:'Ambil Data: monitoring_groups,\ncameras, stats, recent_logs'},
+      {id:'s3',type:'action',lane:1,label:'Tampilkan 4-Grid Slot Kamera\n+ Statistik Hari Ini'},
+      {id:'s4',type:'action',lane:0,label:'Klik "▶ Connect"\npada Slot Kamera'},
+      {id:'s5',type:'action',lane:1,label:'POST /api/cameras/{id}/start\nke AI Service'},
+      {id:'s6',type:'action',lane:1,label:'Buka Koneksi WebSocket\nws://.../ws/stream/{id}'},
+      {id:'s7',type:'action',lane:1,label:'Terima Frame JPEG +\nData Deteksi YOLO per-frame'},
+      {id:'s8',type:'action',lane:1,label:'Render Live Feed +\nIndikator LIVE + FPS Counter'},
+      {id:'s9',type:'decision',lane:0,label:'Klik\nStop?'},
+      {id:'s10',type:'action',lane:1,label:'ws.close() +\nPOST /api/cameras/{id}/stop'},
+      {id:'s11',type:'action',lane:1,label:'Reset Slot ke\nStatus IDLE'},
+      {id:'s12',type:'end',lane:1}
+    ],
+    flows:[
+      {from:'s0',to:'s1'},{from:'s1',to:'s2'},{from:'s2',to:'s3'},
+      {from:'s3',to:'s4'},{from:'s4',to:'s5'},{from:'s5',to:'s6'},
+      {from:'s6',to:'s7'},{from:'s7',to:'s8'},{from:'s8',to:'s9'},
+      {from:'s9',to:'s10',label:'[Ya]'},
+      {from:'s9',to:'s7',label:'[Tidak]',side:true,sideLeft:false},
+      {from:'s10',to:'s11'},{from:'s11',to:'s12'}
+    ]
+  }
+},
+
+/* ──────────────── UC8: LIHAT LOG & LAPORAN (+ UC9: FILTER) ──────────────── */
+{
+  title:'UC8+UC9: Lihat Log & Laporan (+ Filter)', shortTitle:'Lihat Log & Laporan',
+  figSeq:14, figAct:15,
+  seq:{
+    name:'lihat log',
+    participants:[
+      {label:'Admin',type:'actor'},
+      {label:'Interface\nLog',type:'comp'},
+      {label:'MonitoringController',type:'comp'},
+      {label:'tabel:\nmonitoring_logs',type:'db'}
+    ],
+    messages:[
+      {from:0,to:1,label:'1. GET /monitoring'},
+      {from:1,to:2,label:'2. index(Request $request)'},
+      {from:2,to:3,label:'3. SELECT monitoring_logs.*, cameras.nama_kamera\nWITH camera ORDER BY waktu DESC\nLIMIT 20 (paginate)'},
+      {from:3,to:2,label:'4. return LengthAwarePaginator<MonitoringLog>',isReturn:true},
+      {from:2,to:3,label:'5. COUNT(*) WHERE status=patuh\nCOUNT(*) WHERE status=tidak_patuh'},
+      {from:3,to:2,label:'6. return stats{total, patuh, tidak, persen}',isReturn:true},
+      {from:2,to:1,label:'7. render monitoring.index\n(tabel log + statistik)',isReturn:true},
+      {from:0,to:1,label:'8. Set filter: status / camera_id / date_from / date_to'},
+      {from:1,to:2,label:'9. GET /monitoring?status=&camera_id=&date_from=&date_to='},
+      {from:2,to:3,label:'10. SELECT monitoring_logs\nWHERE status=? AND camera_id=?\nAND DATE(waktu) BETWEEN ? AND ?'},
+      {from:3,to:2,label:'11. return filtered Collection + count',isReturn:true},
+      {from:2,to:1,label:'12. render monitoring.index\n(hasil filter + persentase)',isReturn:true}
+    ]
+  },
+  act:{
+    name:'lihat log laporan',
+    lanes:['Admin','Sistem'],
+    steps:[
+      {id:'s0',type:'start',lane:0},
+      {id:'s1',type:'action',lane:0,label:'Buka Halaman\nLog & Laporan'},
+      {id:'s2',type:'action',lane:1,label:'Ambil 20 Log Terbaru\n& Statistik dari Database'},
+      {id:'s3',type:'action',lane:1,label:'Tampilkan Tabel Log\n+ Statistik Kepatuhan'},
+      {id:'s4',type:'action',lane:0,label:'Set Filter: Status /\nKamera / Rentang Tanggal'},
+      {id:'s5',type:'action',lane:0,label:'Klik Tombol\n"Terapkan Filter"'},
+      {id:'s6',type:'action',lane:1,label:'Query Database\nDengan Parameter Filter'},
+      {id:'s7',type:'action',lane:1,label:'Tampilkan Hasil Filter\n+ Persentase Kepatuhan'},
+      {id:'s8',type:'action',lane:0,label:'Klik Detail Log\nUntuk Lihat Snapshot'},
+      {id:'s9',type:'action',lane:1,label:'Tampilkan Detail\nLog + Snapshot'},
+      {id:'s10',type:'end',lane:1}
+    ],
+    flows:[
+      {from:'s0',to:'s1'},{from:'s1',to:'s2'},{from:'s2',to:'s3'},
+      {from:'s3',to:'s4'},{from:'s4',to:'s5'},{from:'s5',to:'s6'},
+      {from:'s6',to:'s7'},{from:'s7',to:'s8'},{from:'s8',to:'s9'},{from:'s9',to:'s10'}
+    ]
+  }
+},
+
+/* ──────────────── UC10+11+12: DETEKSI → CATAT → SNAPSHOT ──────────────── */
+{
+  title:'UC10+11+12: Deteksi Cuci Tangan → Catat Kepatuhan → Simpan Snapshot', shortTitle:'Deteksi & Catat Kepatuhan',
+  figSeq:16, figAct:17,
+  seq:{
+    name:'deteksi kepatuhan',
+    participants:[
+      {label:'Sistem AI',type:'actor'},
+      {label:'YOLOv8\nModel',type:'comp'},
+      {label:'ByteTrack\nTracker',type:'comp'},
+      {label:'Compliance\nEngine',type:'comp'},
+      {label:'tabel:\nmonitoring_logs',type:'db'}
+    ],
+    messages:[
+      {from:0,to:1,label:'1. model.predict(frame, conf=0.45)'},
+      {from:1,to:0,label:'2. return Results[{boxes, cls, conf}]',isReturn:true},
+      {from:0,to:2,label:'3. tracker.update(detections, frame)'},
+      {from:2,to:0,label:'4. return Detections[{track_id, bbox, class}]',isReturn:true},
+      {from:0,to:3,label:'5. zone_manager.check_zones(tracked_objects)'},
+      {from:3,to:0,label:'6. return {person_id, zone_hit: sanitizer|wastafel|pintu}',isReturn:true},
+      {from:0,to:3,label:'7. compliance.update_state(person_id, zone_event)'},
+      {from:3,to:0,label:'8. return ComplianceEvent(status, person_id)',isReturn:true},
+      {from:0,to:4,label:'9. INSERT INTO monitoring_logs\n(person_id, group_id, camera_id,\nwaktu, status, membawa_instrumen,\naktivitas_cuci_tangan, confidence)'},
+      {from:4,to:0,label:'10. return log.id',isReturn:true},
+      {from:0,to:0,label:'11. snapshot.save(frame, log_id)\n[«extend» Simpan Snapshot]'},
+      {from:0,to:4,label:'12. UPDATE monitoring_logs\nSET snapshot_path = ? WHERE id = ?'},
+      {from:4,to:0,label:'13. return rowsAffected = 1',isReturn:true}
+    ]
+  },
+  act:{
+    name:'deteksi kepatuhan',
+    lanes:['Sistem AI','Database'],
+    steps:[
+      {id:'s0',type:'start',lane:0},
+      {id:'s1',type:'action',lane:0,label:'Baca Frame\ndari Video Stream'},
+      {id:'s2',type:'action',lane:0,label:'Inferensi YOLOv8\n(Deteksi Objek)'},
+      {id:'s3',type:'action',lane:0,label:'ByteTrack: Lacak\nPergerakan Objek'},
+      {id:'s4',type:'action',lane:0,label:'Periksa Posisi\nObjek di Zona'},
+      {id:'s5',type:'action',lane:0,label:'Update State Machine\nKepatuhan Per Orang'},
+      {id:'s6',type:'decision',lane:0,label:'Event\nKepatuhan?'},
+      {id:'s7',type:'action',lane:1,label:'INSERT Monitoring Log\n(patuh / tidak_patuh)'},
+      {id:'s8',type:'action',lane:0,label:'Simpan Screenshot\nFrame (Snapshot)'},
+      {id:'s9',type:'action',lane:1,label:'UPDATE Log\nSET snapshot_path'},
+      {id:'s10',type:'action',lane:0,label:'Proses Frame\nBerikutnya'},
+      {id:'s11',type:'end',lane:0}
+    ],
+    flows:[
+      {from:'s0',to:'s1'},{from:'s1',to:'s2'},{from:'s2',to:'s3'},
+      {from:'s3',to:'s4'},{from:'s4',to:'s5'},{from:'s5',to:'s6'},
+      {from:'s6',to:'s7',label:'[Ya]'},
+      {from:'s6',to:'s10',label:'[Tidak]',side:true,sideLeft:false},
+      {from:'s7',to:'s8'},{from:'s8',to:'s9'},{from:'s9',to:'s10'},
+      {from:'s10',to:'s1',label:'Loop'},
+      {from:'s10',to:'s11'}
+    ]
+  }
+}
+
+]; // end UCS
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function renderAll(){
+  const nav=document.getElementById('nav');
+  const main=document.getElementById('main');
+  UCS.forEach((uc,idx)=>{
+    const btn=document.createElement('button');
+    btn.className='tb'+(idx===0?' on':'');
+    btn.textContent=uc.title.split(':')[0];
+    btn.title=uc.title;
+    btn.onclick=()=>{
+      document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+      document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+      btn.classList.add('on');
+      document.getElementById('uc'+idx).classList.add('on');
+    };
+    nav.appendChild(btn);
+
+    const sec=document.createElement('div');
+    sec.className='sec'+(idx===0?' on':'');
+    sec.id='uc'+idx;
+    sec.innerHTML=`
+      <div class="sct">${e(uc.title)}</div>
+      <div class="pair">
+        <div class="dbox">
+          <h3>Sequence Diagram</h3>
+          <div class="sx">${seqSVG(uc.seq)}</div>
+          <p class="cap">Gambar 4.${uc.figSeq}. Sequence Diagram ${e(uc.shortTitle)}</p>
+        </div>
+        <div class="dbox">
+          <h3>Activity Diagram</h3>
+          <div class="sx">${actSVG(uc.act)}</div>
+          <p class="cap">Gambar 4.${uc.figAct}. Activity Diagram ${e(uc.shortTitle)}</p>
+        </div>
+      </div>`;
+    main.appendChild(sec);
+  });
+}
+renderAll();
+</script>
+</body>
+</html>
