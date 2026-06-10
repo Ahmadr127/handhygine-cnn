@@ -27,7 +27,7 @@ main{padding:20px;max-width:1800px;margin:0 auto}
 <body>
 <header>
   <h1>📊 Sequence &amp; Activity Diagrams</h1>
-  <p>Sistem Monitoring Kepatuhan Cuci Tangan · YOLOv8 · ByteTrack · Laravel · PostgreSQL</p>
+  <p>Sequence &amp; Activity Diagrams · Sistem Monitoring Kepatuhan Cuci Tangan · YOLOv8 · ByteTrack · Laravel · MySQL</p>
 </header>
 <nav id="nav"></nav>
 <main id="main"></main>
@@ -170,38 +170,49 @@ function actSVG({name, lanes, steps, flows}){
     }
   });
 
-  const mk=`url(#aA_${name})`;
   flows.forEach(fl=>{
     if(!pos[fl.from]||!pos[fl.to]) return;
     const {x:fx,y:fy}=pos[fl.from],{x:tx,y:ty}=pos[fl.to];
     const fst=steps.find(s=>s.id===fl.from),tst=steps.find(s=>s.id===fl.to);
     const lbl=fl.label||'';
-
+    // Color-code decision branches
+    const isYa=lbl==='[Ya]',isTidak=lbl==='[Tidak]';
+    const lc=isYa?'#1a7d3a':isTidak?'#c0392b':'#333';
+    const tc=isYa?'#1a7d3a':isTidak?'#c0392b':'#555';
+    const mkId=`aMK_${name.replace(/\s/g,'_')}_${fl.from}_${fl.to}`;
+    a(`<defs><marker id="${mkId}" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><polygon points="0,0 0,9 9,4.5" fill="${lc}"/></marker></defs>`);
+    const mkc=`url(#${mkId})`;
+    function drawLbl(lx,ly,anc){
+      if(!lbl)return;
+      const lw=lbl.length*6.5+10;
+      const rx=anc==='end'?lx-lw:anc==='start'?lx-2:lx-lw/2;
+      a(`<rect x="${rx}" y="${ly-12}" width="${lw}" height="15" fill="white" opacity="0.92" rx="2"/>`);
+      a(`<text x="${lx}" y="${ly}" text-anchor="${anc}" font-family="Arial" font-size="10" font-style="italic" font-weight="bold" fill="${tc}">${e(lbl)}</text>`);
+    }
     let sy=fy,ey=ty,sx=fx,ex=tx;
-    // Start offsets
     if(fl.side){sy=fy;sx=(fl.sideLeft?fx-48:fx+48);}
     else if(fst.type==='start')sy+=13;
     else if(fst.type==='action')sy+=AH/2;
     else if(fst.type==='decision')sy+=25;
-    // End offsets
     if(tst.type==='end')ey-=17;
     else if(tst.type==='action')ey-=AH/2;
     else if(tst.type==='decision')ey-=25;
     else if(tst.type==='start')ey-=13;
-
-    const backward=(ty < fy-SH*0.6);
-
-    if(Math.abs(sx-ex)<5 && !backward){
-      a(`<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey-7}" stroke="#333" stroke-width="1.3" marker-end="${mk}"/>`);
-      if(lbl)a(`<text x="${sx+8}" y="${(sy+ey)/2}" font-family="Arial" font-size="10" font-style="italic" fill="#555">${e(lbl)}</text>`);
+    const backward=(ty<fy-SH*0.6);
+    if(Math.abs(sx-ex)<5&&!backward){
+      a(`<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey-7}" stroke="${lc}" stroke-width="1.5" marker-end="${mkc}"/>`);
+      if(lbl){const ly=fst.type==='decision'?sy+14:(sy+ey)/2; drawLbl(sx+8,ly,'start');}
     } else if(backward){
       const loopX=Math.min(sx,ex)-AW/2-22;
-      a(`<polyline points="${sx},${sy} ${loopX},${sy} ${loopX},${ey} ${ex+7},${ey}" fill="none" stroke="#333" stroke-width="1.3" marker-end="${mk}"/>`);
-      if(lbl)a(`<text x="${loopX-6}" y="${(sy+ey)/2}" text-anchor="end" font-family="Arial" font-size="10" font-style="italic" fill="#555">${e(lbl)}</text>`);
+      a(`<polyline points="${sx},${sy} ${loopX},${sy} ${loopX},${ey} ${ex+7},${ey}" fill="none" stroke="${lc}" stroke-width="1.5" marker-end="${mkc}"/>`);
+      if(lbl)drawLbl(loopX-6,(sy+ey)/2,'end');
     } else {
       const midY=(sy+ey)/2;
-      a(`<polyline points="${sx},${sy} ${sx},${midY} ${ex},${midY} ${ex},${ey-7}" fill="none" stroke="#333" stroke-width="1.3" marker-end="${mk}"/>`);
-      if(lbl)a(`<text x="${(sx+ex)/2}" y="${midY-5}" text-anchor="middle" font-family="Arial" font-size="10" font-style="italic" fill="#555">${e(lbl)}</text>`);
+      a(`<polyline points="${sx},${sy} ${sx},${midY} ${ex},${midY} ${ex},${ey-7}" fill="none" stroke="${lc}" stroke-width="1.5" marker-end="${mkc}"/>`);
+      if(lbl){
+        if(fl.side){drawLbl(fl.sideLeft?sx-4:sx+4,sy+16,fl.sideLeft?'end':'start');}
+        else{drawLbl((sx+ex)/2,midY-5,'middle');}
+      }
     }
   });
   a(`</svg>`); return s;
@@ -246,7 +257,7 @@ const UCS=[
       {id:'s4',type:'action',lane:1,label:'Validasi Kredensial\nke Database'},
       {id:'s5',type:'decision',lane:1,label:'Valid?'},
       {id:'s6',type:'action',lane:1,label:'Buat Session\n& Redirect Dashboard'},
-      {id:'s7',type:'action',lane:1,label:'Tampilkan Pesan Error'},
+      {id:'s7',type:'action',lane:0,label:'Tampilkan Pesan Error'},
       {id:'s8',type:'end',lane:1}
     ],
     flows:[
@@ -256,7 +267,7 @@ const UCS=[
       {from:'s3',to:'s4'},
       {from:'s4',to:'s5'},
       {from:'s5',to:'s6',label:'[Ya]'},
-      {from:'s5',to:'s7',label:'[Tidak]',side:true,sideLeft:false},
+      {from:'s5',to:'s7',label:'[Tidak]',side:true,sideLeft:true},
       {from:'s7',to:'s3',label:'Ulangi'},
       {from:'s6',to:'s8'}
     ]
@@ -430,7 +441,7 @@ const UCS=[
   seq:{
     name:'dashboard monitoring',
     participants:[
-      {label:'Admin',type:'actor'},
+      {label:'Petugas PPI',type:'actor'},
       {label:'Dashboard\n(browser)',type:'comp'},
       {label:'DashboardController',type:'comp'},
       {label:'AI Service\n(FastAPI/WS)',type:'comp'},
@@ -460,7 +471,7 @@ const UCS=[
   },
   act:{
     name:'dashboard monitoring',
-    lanes:['Admin','Sistem (Dashboard)'],
+    lanes:['Petugas PPI','Sistem (Dashboard)'],
     steps:[
       {id:'s0',type:'start',lane:0},
       {id:'s1',type:'action',lane:0,label:'Buka Halaman\nDashboard (GET /)'},
@@ -494,7 +505,7 @@ const UCS=[
   seq:{
     name:'lihat log',
     participants:[
-      {label:'Admin',type:'actor'},
+      {label:'Petugas PPI',type:'actor'},
       {label:'Interface\nLog',type:'comp'},
       {label:'MonitoringController',type:'comp'},
       {label:'tabel:\nmonitoring_logs',type:'db'}
@@ -516,7 +527,7 @@ const UCS=[
   },
   act:{
     name:'lihat log laporan',
-    lanes:['Admin','Sistem'],
+    lanes:['Petugas PPI','Sistem'],
     steps:[
       {id:'s0',type:'start',lane:0},
       {id:'s1',type:'action',lane:0,label:'Buka Halaman\nLog & Laporan'},
@@ -545,34 +556,34 @@ const UCS=[
   seq:{
     name:'deteksi kepatuhan',
     participants:[
-      {label:'Sistem AI',type:'actor'},
+      {label:'Kamera CCTV',type:'actor'},
+      {label:'Python AI\nService',type:'comp'},
       {label:'YOLOv8\nModel',type:'comp'},
       {label:'ByteTrack\nTracker',type:'comp'},
       {label:'Compliance\nEngine',type:'comp'},
       {label:'tabel:\nmonitoring_logs',type:'db'}
     ],
     messages:[
-      {from:0,to:1,label:'1. model.predict(frame, conf=0.45)'},
-      {from:1,to:0,label:'2. return Results[{boxes, cls, conf}]',isReturn:true},
-      {from:0,to:2,label:'3. tracker.update(detections, frame)'},
-      {from:2,to:0,label:'4. return Detections[{track_id, bbox, class}]',isReturn:true},
-      {from:0,to:3,label:'5. zone_manager.check_zones(tracked_objects)'},
-      {from:3,to:0,label:'6. return {person_id, zone_hit: sanitizer|wastafel|pintu}',isReturn:true},
-      {from:0,to:3,label:'7. compliance.update_state(person_id, zone_event)'},
-      {from:3,to:0,label:'8. return ComplianceEvent(status, person_id)',isReturn:true},
-      {from:0,to:4,label:'9. INSERT INTO monitoring_logs\n(person_id, group_id, camera_id,\nwaktu, status, membawa_instrumen,\naktivitas_cuci_tangan, confidence)'},
-      {from:4,to:0,label:'10. return log.id',isReturn:true},
-      {from:0,to:0,label:'11. snapshot.save(frame, log_id)\n[«extend» Simpan Snapshot]'},
-      {from:0,to:4,label:'12. UPDATE monitoring_logs\nSET snapshot_path = ? WHERE id = ?'},
-      {from:4,to:0,label:'13. return rowsAffected = 1',isReturn:true}
+      {from:0,to:1,label:'1. Video frame (continuous stream)'},
+      {from:1,to:2,label:'2. Deteksi objek pada frame video'},
+      {from:2,to:1,label:'3. return DetectionResult {bbox, class, confidence}',isReturn:true},
+      {from:1,to:3,label:'4. Lacak pergerakan objek antar frame'},
+      {from:3,to:1,label:'5. return TrackedObjects {track_id, bbox, class}',isReturn:true},
+      {from:1,to:4,label:'6. Evaluasi kepatuhan berdasarkan posisi zona'},
+      {from:4,to:1,label:'7. return ComplianceEvent {status, person_id}',isReturn:true},
+      {from:1,to:5,label:'8. [opt] INSERT monitoring_logs\n(person_id, group_id, camera_id, waktu, status, confidence)'},
+      {from:5,to:1,label:'9. return log_id',isReturn:true},
+      {from:1,to:1,label:'10. Simpan snapshot frame ke storage'},
+      {from:1,to:5,label:'11. UPDATE monitoring_logs SET snapshot_path = ?'},
+      {from:5,to:1,label:'12. return rowsAffected = 1',isReturn:true}
     ]
   },
   act:{
     name:'deteksi kepatuhan',
-    lanes:['Sistem AI','Database'],
+    lanes:['Python AI Service','Database'],
     steps:[
       {id:'s0',type:'start',lane:0},
-      {id:'s1',type:'action',lane:0,label:'Baca Frame\ndari Video Stream'},
+      {id:'s1',type:'action',lane:0,label:'Baca Frame dari\nVideo Stream'},
       {id:'s2',type:'action',lane:0,label:'Inferensi YOLOv8\n(Deteksi Objek)'},
       {id:'s3',type:'action',lane:0,label:'ByteTrack: Lacak\nPergerakan Objek'},
       {id:'s4',type:'action',lane:0,label:'Periksa Posisi\nObjek di Zona'},
@@ -588,7 +599,7 @@ const UCS=[
       {from:'s0',to:'s1'},{from:'s1',to:'s2'},{from:'s2',to:'s3'},
       {from:'s3',to:'s4'},{from:'s4',to:'s5'},{from:'s5',to:'s6'},
       {from:'s6',to:'s7',label:'[Ya]'},
-      {from:'s6',to:'s10',label:'[Tidak]',side:true,sideLeft:false},
+      {from:'s6',to:'s10',label:'[Tidak]',side:true,sideLeft:true},
       {from:'s7',to:'s8'},{from:'s8',to:'s9'},{from:'s9',to:'s10'},
       {from:'s10',to:'s1',label:'Loop'},
       {from:'s10',to:'s11'}
