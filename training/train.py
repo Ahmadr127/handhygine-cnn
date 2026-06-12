@@ -49,7 +49,6 @@ def train(epochs=100, batch=16):
         "verbose":   True,
         "save":      True,
         "save_period": 10,       # Simpan checkpoint setiap 10 epoch
-        "device":    "cpu",      # Gunakan CPU default karena local dev environment
     }
 
     print("=" * 60)
@@ -61,15 +60,20 @@ def train(epochs=100, batch=16):
 
     # Cek apakah ada model sebelumnya untuk resume
     last_model = MODELS_DIR / "handwash_v1" / "weights" / "last.pt"
+    is_resume = False
     if last_model.exists():
         print(f"[INFO] Resume dari checkpoint: {last_model}")
         model = YOLO(str(last_model))
+        is_resume = True
     else:
         print("[INFO] Mulai dari YOLOv8n pre-trained COCO")
         model = YOLO("yolov8n.pt")
 
     # Training
-    results = model.train(**CONFIG)
+    if is_resume:
+        results = model.train(resume=True)
+    else:
+        results = model.train(**CONFIG)
 
     # Salin best.pt ke models/
     best_src = MODELS_DIR / "handwash_v1" / "weights" / "best.pt"

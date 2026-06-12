@@ -32,6 +32,7 @@ SANITIZER_SRC = BASE_DIR / "bukan sistem" / "hand sanitizer detection.v1i.yolov8
 HANDWASH_SRC  = BASE_DIR / "bukan sistem" / "hand-washing.v1i.yolov8"
 TRAY_SRC      = BASE_DIR / "tray_dataset_raw"  # belum dianotasi
 DOOR_SRC      = BASE_DIR / "bukan sistem" / "OIDv4_ToolKit" / "OID" / "Dataset" / "train" / "Door"
+SINK_SRC      = BASE_DIR / "bukan sistem" / "OIDv4_ToolKit" / "OID" / "Dataset" / "train" / "Sink"
 
 VAL_SPLIT = 0.2  # 20% untuk validasi
 
@@ -201,12 +202,18 @@ def main():
         print(f"  {n} gambar tray diproses")
 
     # 4. Door dataset dari OIDv4_ToolKit (pintu_masuk -> class index 5)
-    print("\n[4/4] Processing door dataset...")
+    print("\n[4/5] Processing door dataset (pintu_masuk)...")
     n_door = process_door_dataset()
     if n_door > 0:
         print(f"  {n_door} gambar pintu diproses")
 
-    # 5. Buat data.yaml secara dinamis
+    # 5. Sink dataset dari OIDv4_ToolKit (wastafel -> class index 3)
+    print("\n[5/5] Processing sink dataset (wastafel)...")
+    n_sink = process_sink_dataset()
+    if n_sink > 0:
+        print(f"  {n_sink} gambar wastafel diproses")
+
+    # 6. Buat data.yaml secara dinamis
     write_data_yaml()
 
     print_summary()
@@ -311,6 +318,94 @@ def process_door_dataset():
         shutil.copy2(img_path, out_img_dir / img_path.name)
 
         # Tulis label YOLO
+        dst_label = out_lbl_dir / f"{stem}.txt"
+        with open(dst_label, "w") as f:
+            f.write("\n".join(yolo_lines))
+
+        count += 1
+
+    return count
+
+
+def process_sink_dataset():
+    """
+    Membaca dataset Sink dari OIDv4_ToolKit (format OID text),
+    mengonversinya ke YOLO format (class index 3 = wastafel),
+    dan menyalin ke dataset train/val.
+    """
+    if not SINK_SRC.exists():
+        print(f"  [SKIP] Sink dataset source tidak ditemukan di: {SINK_SRC}")
+        return 0
+
+    lbl_dir = SINK_SRC / "Label"
+    if not lbl_dir.exists():
+        print(f"  [SKIP] Folder Label sink tidak ditemukan")
+        return 0
+
+    from PIL import Image
+
+    images = list(SINK_SRC.glob("*.jpg")) + list(SINK_SRC.glob("*.png"))
+    count = 0
+
+    for img_path in images:
+        stem = img_path.stem
+        label_path = lbl_dir / f"{stem}.txt"
+        if not label_path.exists():
+            continue
+
+        try:
+            with Image.open(img_path) as img:
+                img_w, img_h = img.size
+        except Exception as e:
+            print(f"  Error loading image {img_path.name}: {e}")
+            continue
+
+        yolo_lines = []
+        with open(label_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split()
+                if len(parts) < 5 or parts[0].lower() != "sink":
+                    continue
+
+                try:
+                    xmin = float(parts[1])
+                    ymin = float(parts[2])
+                    xmax = float(parts[3])
+                    ymax = float(parts[4])
+
+                    # Convert OID absolute pixel → YOLO normalized
+                    x_center = ((xmin + xmax) / 2.0) / img_w
+                    y_center = ((ymin + ymax) / 2.0) / img_h
+                    w = (xmax - xmin) / img_w
+                    h = (ymax - ymin) / img_h
+
+                    # Clamp ke rentang [0, 1]
+                    x_center = max(0.0, min(1.0, x_center))
+                    y_center = max(0.0, min(1.0, y_center))
+                    w = max(0.0, min(1.0, w))
+                    h = max(0.0, min(1.0, h))
+
+                    # Class index 3 = wastafel
+                    yolo_lines.append(f"3 {x_center:.6f} {y_center:.6f} {w:.6f} {h:.6f}")
+                except Exception as e:
+                    print(f"  Error parsing line '{line}' in {label_path.name}: {e}")
+                    continue
+
+        if not yolo_lines:
+            continue
+
+        # Tentukan split train/val
+        is_val = (abs(hash(stem)) % 10) < int(VAL_SPLIT * 10)
+        out_img_dir = IMAGES_VAL if is_val else IMAGES_TRAIN
+        out_lbl_dir = LABELS_VAL if is_val else LABELS_TRAIN
+
+        # Salin gambar
+        shutil.copy2(img_path, out_img_dir / img_path.name)
+
+        # Tulis label YOLO (class 3 = wastafel)
         dst_label = out_lbl_dir / f"{stem}.txt"
         with open(dst_label, "w") as f:
             f.write("\n".join(yolo_lines))
