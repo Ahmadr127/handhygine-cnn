@@ -34,11 +34,21 @@ TRAY_SRC      = BASE_DIR / "tray_dataset_raw"  # belum dianotasi
 DOOR_SRC      = BASE_DIR / "bukan sistem" / "OIDv4_ToolKit" / "OID" / "Dataset" / "train" / "Door"
 SINK_SRC      = BASE_DIR / "bukan sistem" / "OIDv4_ToolKit" / "OID" / "Dataset" / "train" / "Sink"
 
+# Sumber dataset Roboflow baru (Metode A)
+ROBOFLOW_DOOR_SRC = BASE_DIR / "bukan sistem" / "roboflow" / "Door.v1i.yolov8"
+ROBOFLOW_SINK_SRC = BASE_DIR / "bukan sistem" / "roboflow" / "Find sink.v1-continuous-improvement-2026-06-12.yolov8"
+ROBOFLOW_TRAY_SRC = BASE_DIR / "bukan sistem" / "roboflow" / "Medical Tray.v1i.yolov8"
+
 VAL_SPLIT = 0.2  # 20% untuk validasi
 
 # ─── Mapping kelas ─────────────────────────────────────────────────────────
 # hand-sanitizer dataset: kelas 0 = Sanitizer → remap ke 4 (hand_sanitizer)
 SANITIZER_REMAP = {0: 4}
+
+# Roboflow remaps
+DOOR_REMAP = {0: 5, 1: 5} # 0 & 1 -> pintu_masuk (5)
+SINK_REMAP = {0: 3}       # 0 -> wastafel (3)
+TRAY_REMAP = {0: 1}       # 0 -> baki_medis (1)
 
 # hand-washing dataset: step_1..6 → tidak digunakan sebagai object detection class
 # Dataset ini bisa digunakan sebagai data augmentasi untuk aktivitas orang di depan sanitizer
@@ -202,18 +212,31 @@ def main():
         print(f"  {n} gambar tray diproses")
 
     # 4. Door dataset dari OIDv4_ToolKit (pintu_masuk -> class index 5)
-    print("\n[4/5] Processing door dataset (pintu_masuk)...")
+    print("\n[4/6] Processing door dataset (OIDv4 - pintu_masuk)...")
     n_door = process_door_dataset()
     if n_door > 0:
         print(f"  {n_door} gambar pintu diproses")
 
     # 5. Sink dataset dari OIDv4_ToolKit (wastafel -> class index 3)
-    print("\n[5/5] Processing sink dataset (wastafel)...")
+    print("\n[5/6] Processing sink dataset (OIDv4 - wastafel)...")
     n_sink = process_sink_dataset()
     if n_sink > 0:
         print(f"  {n_sink} gambar wastafel diproses")
 
-    # 6. Buat data.yaml secara dinamis
+    # 6. Menambahkan dataset format YOLO dari Roboflow (Metode A)
+    print("\n[6/6] Processing dataset Roboflow baru (Metode A)...")
+    for split in ["train", "valid", "test"]:
+        # TRAY
+        n_tray = copy_dataset_split(ROBOFLOW_TRAY_SRC, split, remap=TRAY_REMAP)
+        if n_tray > 0: print(f"  Medical Tray {split}: {n_tray} gambar")
+        # DOOR
+        n_rdoor = copy_dataset_split(ROBOFLOW_DOOR_SRC, split, remap=DOOR_REMAP)
+        if n_rdoor > 0: print(f"  Door {split}: {n_rdoor} gambar")
+        # SINK
+        n_rsink = copy_dataset_split(ROBOFLOW_SINK_SRC, split, remap=SINK_REMAP)
+        if n_rsink > 0: print(f"  Sink {split}: {n_rsink} gambar")
+
+    # 7. Buat data.yaml secara dinamis
     write_data_yaml()
 
     print_summary()
