@@ -23,19 +23,8 @@ class CameraController extends Controller
             'source'      => 'required|string',
         ]);
 
-        // Simpan ke DB lokal
+        // Simpan ke DB lokal (karena AI service & Laravel pakai DB yang sama, tidak perlu sync via API)
         $camera = Camera::create($validated);
-
-        // Sync ke AI Service
-        try {
-            Http::timeout(5)->post(config('services.handhygiene-cnn.url') . '/api/cameras', [
-                'nama_kamera' => $camera->nama_kamera,
-                'tipe'        => $camera->tipe,
-                'source'      => $camera->source,
-            ]);
-        } catch (\Exception $e) {
-            // AI Service mungkin belum jalan, abaikan
-        }
 
         return redirect()->route('cameras.index')
             ->with('success', "Kamera '{$camera->nama_kamera}' berhasil ditambahkan.");

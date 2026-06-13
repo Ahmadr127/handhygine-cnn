@@ -19,6 +19,9 @@ pip-log.txt
 /dataset/
 /snapshots/
 
+/dataset_backup
+/runs
+
 # Laravel
 /laravel-app/vendor/
 /laravel-app/node_modules/

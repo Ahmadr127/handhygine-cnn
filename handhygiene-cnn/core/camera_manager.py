@@ -68,6 +68,8 @@ class CameraProcessor:
         # Annotator supervision
         self.box_annotator = sv.BoxAnnotator(thickness=2)
         self.label_annotator = sv.LabelAnnotator(text_scale=0.5)
+        
+        self.handwash_dwell_timers = {}
         self._thread: threading.Thread | None = None
 
     # ─── Start / Stop ────────────────────────────────────────────────────────
@@ -192,17 +194,27 @@ class CameraProcessor:
             in_handwash = self.zone_mgr.is_in_handwash_zone(bx, by)
             in_door = self.zone_mgr.is_in_door_zone(bx, by)
 
+            state = "monitoring"
+
             if near_instrument:
                 self.group_engine.report_instrument(self.camera_id, str(tid), conf, frame)
                 state = "carrying_instrument"
-            elif in_handwash:
-                self.group_engine.report_hand_wash(self.camera_id)
-                state = "hand_wash_zone"
-            elif in_door:
-                self.group_engine.report_door_entry(self.camera_id, frame)
-                state = "monitoring"  # At door
+
+            # Logika menetap (Dwell Time) di area cuci tangan minimal 2 detik
+            if in_handwash:
+                if tid not in self.handwash_dwell_timers:
+                    self.handwash_dwell_timers[tid] = time.time()
+                
+                dwell = time.time() - self.handwash_dwell_timers[tid]
+                if dwell >= 2.0:
+                    self.group_engine.report_hand_wash(self.camera_id)
+                    state = "hand_wash_zone"
             else:
-                state = "monitoring"
+                if tid in self.handwash_dwell_timers:
+                    del self.handwash_dwell_timers[tid]
+
+            if in_door:
+                self.group_engine.report_door_entry(self.camera_id, frame)
 
             label = f"#{tid} {STATE_LABELS_ID.get(state, state)}"
             labels.append(label)

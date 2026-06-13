@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     active_cameras = get_active_cameras()
     for cam in active_cameras:
         print(f"[Startup] Auto-start kamera: {cam['nama_kamera']}")
-        camera_manager.start_camera(cam["id"], cam["nama_kamera"], cam["source"])
+        camera_manager.start_camera(cam["id"], cam["nama_kamera"], cam["source"], cam["group_id"])
 
     yield  # ← aplikasi berjalan di sini
 

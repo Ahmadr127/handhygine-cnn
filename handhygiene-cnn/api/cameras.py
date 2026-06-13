@@ -55,8 +55,7 @@ def remove_camera(camera_id: int):
     """Hapus kamera (stop dulu jika sedang berjalan)."""
     if camera_manager.is_running(camera_id):
         camera_manager.stop_camera(camera_id)
-    delete_camera(camera_id)
-    return {"message": "Kamera dihapus"}
+    return {"message": "Kamera dihentikan"}
 
 
 @router.post("/{camera_id}/start")
