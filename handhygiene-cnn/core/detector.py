@@ -11,35 +11,50 @@ from config import MODEL_PATH, FALLBACK_MODEL, DETECTION_CONFIDENCE, CLASS_NAMES
 class Detector:
     """
     Wrapper YOLOv8.
-    Otomatis fallback ke yolov8n.pt (COCO) jika best.pt belum ada.
+    Menggunakan dua model sekaligus:
+    1. yolov8n.pt untuk deteksi orang (tenaga kesehatan)
+    2. best.pt untuk deteksi instrumen medis (baki, troli, dsb)
     """
 
     def __init__(self):
+        # 1. Load model khusus (best.pt) untuk instrumen
         model_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), MODEL_PATH)
+            os.path.join(os.path.dirname(__file__), "..", MODEL_PATH)
         )
         if os.path.exists(model_path):
-            print(f"[Detector] Load model: {model_path}")
-            self.model = YOLO(model_path)
+            print(f"[Detector] Load model custom: {model_path}")
+            self.model_custom = YOLO(model_path)
         else:
-            print(f"[Detector] best.pt tidak ditemukan, fallback ke {FALLBACK_MODEL}")
-            self.model = YOLO(FALLBACK_MODEL)
+            print(f"[Detector] best.pt tidak ditemukan, fungsi custom mati.")
+            self.model_custom = None
+
+        # 2. Load model bawaan (yolov8n.pt) khusus untuk mendeteksi 'person' (class 0)
+        print(f"[Detector] Load model person: {FALLBACK_MODEL}")
+        self.model_person = YOLO(FALLBACK_MODEL)
 
         self.conf = DETECTION_CONFIDENCE
         self._class_names = CLASS_NAMES
 
     def detect(self, frame: np.ndarray) -> sv.Detections:
-        """
-        Jalankan deteksi pada frame.
+        # Deteksi orang (class 0) dari model standar
+        res_person = self.model_person(frame, conf=self.conf, classes=[0], verbose=False)[0]
+        det_person = sv.Detections.from_ultralytics(res_person)
 
-        Args:
-            frame: BGR numpy array dari OpenCV
+        # Deteksi alat medis dari model training
+        if self.model_custom:
+            res_custom = self.model_custom(frame, conf=self.conf, verbose=False)[0]
+            det_custom = sv.Detections.from_ultralytics(res_custom)
+            
+            # Gabungkan hasil deteksi
+            if len(det_person) > 0 and len(det_custom) > 0:
+                detections = sv.Detections.merge([det_person, det_custom])
+            elif len(det_custom) > 0:
+                detections = det_custom
+            else:
+                detections = det_person
+        else:
+            detections = det_person
 
-        Returns:
-            supervision.Detections (xyxy, confidence, class_id)
-        """
-        results = self.model(frame, conf=self.conf, verbose=False)[0]
-        detections = sv.Detections.from_ultralytics(results)
         return detections
 
     def get_class_name(self, class_id: int) -> str:

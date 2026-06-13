@@ -153,20 +153,23 @@ class CameraProcessor:
         detections = self.detector.detect(frame)
 
         if len(detections) == 0:
-            return frame
+            # Tetap gambar zona walaupun tidak ada deteksi
+            annotated = frame.copy()
+            self._draw_zones(annotated)
+            return annotated
 
-        # Tracking
-        tracked = self.tracker.update(detections)
+        # Ambil instrumen dari RAW detections agar tidak dibuang oleh tracker
+        instrument_mask = np.isin(detections.class_id, list(INSTRUMENT_CLASSES))
+        instruments = detections[instrument_mask]
 
-        if len(tracked) == 0:
-            return frame
+        # Ambil person untuk di-track
+        person_mask = detections.class_id == CLASS_PERSON
+        person_detections = detections[person_mask]
 
-        # Pisahkan person dan non-person
-        person_mask = tracked.class_id == CLASS_PERSON
-        instrument_mask = np.isin(tracked.class_id, list(INSTRUMENT_CLASSES))
-
-        persons = tracked[person_mask]
-        instruments = tracked[instrument_mask]
+        if len(person_detections) > 0:
+            persons = self.tracker.update(person_detections)
+        else:
+            persons = sv.Detections.empty()
 
         # Buat set bounding box instrumen (untuk cek proximity)
         instr_boxes = instruments.xyxy if len(instruments) > 0 else np.array([])

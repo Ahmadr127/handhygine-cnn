@@ -196,6 +196,10 @@ AI_SERVICE_WS=ws://localhost:8001
 
 ---
 
+Membaca ulang model yg baru di training
+python -m uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+
+
 ## 📚 Referensi
 - [YOLOv8 Documentation](https://docs.ultralytics.com)
 - [Supervision Library](https://supervision.roboflow.com)
