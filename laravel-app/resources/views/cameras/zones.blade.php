@@ -123,7 +123,9 @@
         </div>
 
         <div class="canvas-container">
-            <canvas id="zoneCanvas" width="800" height="450"></canvas>
+            <div id="loadingStream" style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:var(--text-muted); z-index: 1;">Connecting to video stream...</div>
+            <img id="videoStream" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: fill; z-index: 2; display: none;" />
+            <canvas id="zoneCanvas" width="800" height="450" style="position: relative; z-index: 3; background: transparent;"></canvas>
         </div>
 
         <div class="canvas-instructions">
@@ -354,5 +356,37 @@
 
     // Initial draw existing zones
     draw();
+
+    // Video Stream WebSocket
+    const AI_WS = '{{ config('services.handhygiene-cnn.ws_url', 'ws://localhost:8001') }}';
+    const ws = new WebSocket(`${AI_WS}/ws/stream/${CAMERA_ID}`);
+    const videoStream = document.getElementById('videoStream');
+    const loadingStream = document.getElementById('loadingStream');
+
+    ws.onopen = () => {
+        console.log('WebSocket connected for stream');
+        // Ensure camera is started in AI service
+        fetch(`${AI_WS.replace('ws://', 'http://')}/api/cameras/${CAMERA_ID}/start`, {method: 'POST'}).catch(() => {});
+    };
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.error) return;
+        videoStream.src = 'data:image/jpeg;base64,' + data.frame;
+        videoStream.style.display = 'block';
+        loadingStream.style.display = 'none';
+    };
+
+    ws.onerror = () => {
+        loadingStream.textContent = 'Gagal terhubung ke AI Service.';
+        loadingStream.style.display = 'block';
+        videoStream.style.display = 'none';
+    };
+
+    ws.onclose = () => {
+        loadingStream.textContent = 'Stream terputus. Muat ulang halaman.';
+        loadingStream.style.display = 'block';
+        videoStream.style.display = 'none';
+    };
 </script>
 @endpush

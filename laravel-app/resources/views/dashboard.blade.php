@@ -19,10 +19,38 @@
         grid-template-columns: 1fr 1fr;
         grid-template-rows: 1fr 1fr;
         gap: 12px;
-        height: calc(100vh - var(--topbar-h) - 220px);
+        height: calc(100vh - var(--topbar-h) - 130px);
         min-height: 420px;
         margin-bottom: 20px;
     }
+    
+    /* Fullscreen Support */
+    .camera-grid:fullscreen {
+        height: 100vh !important;
+        margin: 0 !important;
+        gap: 4px;
+        background: #111;
+        padding: 4px;
+    }
+    .camera-frame:fullscreen {
+        border: none !important;
+        border-radius: 0 !important;
+        background: #000;
+        width: 100vw !important;
+        height: 100vh !important;
+        margin: 0 !important;
+    }
+    .btn-icon {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        border-radius: 4px;
+        padding: 2px 6px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: background 0.2s;
+    }
+    .btn-icon:hover { background: rgba(255,255,255,0.4); }
 
     .camera-frame {
         background: var(--bg-card);
@@ -190,35 +218,12 @@
 @endpush
 
 @section('content')
-<!-- ── Statistik Hari Ini ──────────────────────────────────────────── -->
-<div class="stats-row">
-    <div class="stat-card patuh">
-        <div class="stat-icon">✅</div>
-        <div class="stat-value" id="statPatuh">{{ $stats['total_patuh'] }}</div>
-        <div class="stat-label">Patuh Hari Ini</div>
-    </div>
-    <div class="stat-card tidak-patuh">
-        <div class="stat-icon">❌</div>
-        <div class="stat-value" id="statTidak">{{ $stats['total_tidak_patuh'] }}</div>
-        <div class="stat-label">Tidak Patuh</div>
-    </div>
-    <div class="stat-card total">
-        <div class="stat-icon">📊</div>
-        <div class="stat-value" id="statTotal">{{ $stats['total'] }}</div>
-        <div class="stat-label">Total Hari Ini</div>
-    </div>
-    <div class="stat-card persen">
-        <div class="stat-icon">📈</div>
-        <div class="stat-value" id="statPersen">{{ $stats['persen_patuh'] }}%</div>
-        <div class="stat-label">Tingkat Kepatuhan</div>
-    </div>
-</div>
 
 <!-- ── Group Selector ────────────────────────────────────────────────── -->
-<div class="card mb-4" style="padding:12px 20px; display:flex; align-items:center; gap:12px;">
-    <span style="font-weight:600;font-size:13px;">Grup Monitoring:</span>
+<div class="card" style="padding:8px 16px; display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+    <span style="font-weight:600;font-size:12px;">Grup Monitoring:</span>
     <form method="GET" action="{{ route('dashboard') }}" style="display:flex;gap:8px;flex:1;">
-        <select name="group_id" class="form-control" style="width:auto;min-width:200px;" onchange="this.form.submit()">
+        <select name="group_id" class="form-control" style="width:auto;min-width:180px;font-size:12px;padding:4px 8px;" onchange="this.form.submit()">
             @if($groups->isEmpty())
                 <option value="">-- Belum ada grup --</option>
             @endif
@@ -229,11 +234,13 @@
             @endforeach
         </select>
         @if($selected_group)
-        <span class="badge {{ $selected_group->aktif ? 'badge-patuh' : 'badge-tidak-patuh' }}" style="margin-left:auto;">
+        <span class="badge {{ $selected_group->aktif ? 'badge-patuh' : 'badge-tidak-patuh' }}" style="margin-left:auto;font-size:11px;padding:4px 8px;">
             {{ $selected_group->aktif ? '● GRUP AKTIF' : '○ GRUP OFF' }}
         </span>
         @endif
     </form>
+    <button id="btn-multi-connect" class="btn btn-success" style="padding:4px 10px;font-size:12px;background:var(--green-dim);color:var(--green);border:1px solid var(--green);" onclick="toggleAllCameras()">▶ Connect Semua</button>
+    <button class="btn btn-primary" style="padding:4px 10px;font-size:12px;" onclick="toggleFullscreen('cameraGrid')" title="Fullscreen Grid">⛶ Fullscreen</button>
 </div>
 
 <!-- ── Grid Kamera dalam Grup ────────────────────────────────────────── -->
@@ -248,9 +255,12 @@
                     <span class="camera-frame-name" id="fname-{{ $slot }}">
                         {{ $cam->tipe_icon }} {{ $cam->nama_kamera }}
                     </span>
-                    <span class="camera-slot-status {{ $cam->aktif ? 'aktif' : 'idle' }}" id="fstatus-{{ $slot }}">
-                        {{ $cam->aktif ? 'LIVE' : 'IDLE' }}
-                    </span>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button class="btn-icon" onclick="toggleFullscreen('frame-{{ $slot }}')" title="Fullscreen">⛶</button>
+                        <span class="camera-slot-status {{ $cam->aktif ? 'aktif' : 'idle' }}" id="fstatus-{{ $slot }}">
+                            {{ $cam->aktif ? 'LIVE' : 'IDLE' }}
+                        </span>
+                    </div>
                 </div>
 
                 <!-- FPS counter -->
@@ -326,6 +336,42 @@
 
     // State per slot: { ws, cameraId, frameCount, lastFpsTime, fps }
     const slotState = { 1: null, 2: null, 3: null, 4: null };
+    let allConnected = false;
+
+    function toggleAllCameras() {
+        const btn = document.getElementById('btn-multi-connect');
+        if (allConnected) {
+            for (let slot = 1; slot <= 4; slot++) {
+                if (slotState[slot]) disconnect(slot);
+            }
+            btn.innerHTML = '▶ Connect Semua';
+            btn.style.background = 'var(--green-dim)';
+            btn.style.color = 'var(--green)';
+            btn.style.borderColor = 'var(--green)';
+            allConnected = false;
+        } else {
+            for (let slot = 1; slot <= 4; slot++) {
+                const sel = document.getElementById(`select-${slot}`);
+                if (sel && sel.value && !slotState[slot]) connect(slot);
+            }
+            btn.innerHTML = '⏹ Stop Semua';
+            btn.style.background = 'var(--red-dim)';
+            btn.style.color = 'var(--red)';
+            btn.style.borderColor = 'var(--red)';
+            allConnected = true;
+        }
+    }
+
+    function toggleFullscreen(elemId) {
+        const elem = document.getElementById(elemId);
+        if (!document.fullscreenElement) {
+            elem.requestFullscreen().catch(err => {
+                alert(`Gagal membuka mode fullscreen: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
 
     function onCameraSelect(slot) {
         // Obsolete function since select is removed, but kept for safe error handling just in case.
@@ -350,7 +396,7 @@
         }
     }
 
-    function connect(slot, isAutoStart = false) {
+    async function connect(slot, isAutoStart = false) {
         const sel = document.getElementById(`select-${slot}`);
         if (!sel) return;
         const cameraId = sel.value;
@@ -358,8 +404,10 @@
 
         if (!isAutoStart) {
             // Start monitoring on AI service manually
-            fetch(`${AI_WS.replace('ws://', 'http://')}/api/cameras/${cameraId}/start`, {method: 'POST'})
-                .catch(() => {});
+            try {
+                const res = await fetch(`${AI_WS.replace('ws://', 'http://')}/api/cameras/${cameraId}/start`, {method: 'POST'});
+                if (!res.ok) console.error(`[Cam ${slot}] Failed to start on AI service`);
+            } catch(e) {}
         }
 
         const ws = new WebSocket(`${AI_WS}/ws/stream/${cameraId}`);

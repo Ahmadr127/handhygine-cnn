@@ -188,11 +188,18 @@ class CameraProcessor:
             bx, by = Tracker.get_bottom_center(bbox)
             cx, cy = Tracker.get_center(bbox)
 
+            # Scale bx, by to 800x450 reference size since zones are drawn on 800x450 UI canvas
+            h_frame, w_frame = frame.shape[:2]
+            scale_x_ref = 800.0 / w_frame
+            scale_y_ref = 450.0 / h_frame
+            bx_scaled = bx * scale_x_ref
+            by_scaled = by * scale_y_ref
+
             # Cek apakah membawa instrumen (overlap/proximity)
             near_instrument = self._is_near_instrument(bbox, instr_boxes)
 
-            in_handwash = self.zone_mgr.is_in_handwash_zone(bx, by)
-            in_door = self.zone_mgr.is_in_door_zone(bx, by)
+            in_handwash = self.zone_mgr.is_in_handwash_zone(bx_scaled, by_scaled)
+            in_door = self.zone_mgr.is_in_door_zone(bx_scaled, by_scaled)
 
             state = "monitoring"
 
@@ -269,6 +276,10 @@ class CameraProcessor:
     def _draw_zones(self, frame: np.ndarray):
         """Gambar polygon zone di frame (semi-transparan)."""
         overlay = frame.copy()
+        h_frame, w_frame = frame.shape[:2]
+        scale_x = w_frame / 800.0
+        scale_y = h_frame / 450.0
+
         zone_colors = {
             "sanitizer": (0, 255, 0),    # hijau
             "wastafel":  (255, 255, 0),  # kuning
@@ -277,14 +288,15 @@ class CameraProcessor:
         for zone in self.zone_mgr.zones:
             color = zone_colors.get(zone["tipe"], (128, 128, 128))
             pts_shapely = list(zone["polygon"].exterior.coords)
-            pts = np.array([[int(x), int(y)] for x, y in pts_shapely[:-1]], np.int32)
+            pts = np.array([[int(x * scale_x), int(y * scale_y)] for x, y in pts_shapely[:-1]], np.int32)
             cv2.fillPoly(overlay, [pts], color)
             cv2.polylines(frame, [pts], True, color, 2)
             # Label zona
-            cx = int(sum(p[0] for p in pts_shapely) / len(pts_shapely))
-            cy = int(sum(p[1] for p in pts_shapely) / len(pts_shapely))
-            cv2.putText(frame, zone["nama"], (cx - 30, cy),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+            if len(pts) > 0:
+                cx = int(sum(p[0] for p in pts) / len(pts))
+                cy = int(sum(p[1] for p in pts) / len(pts))
+                cv2.putText(frame, zone["nama"], (cx - 30, cy),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
         cv2.addWeighted(overlay, 0.2, frame, 0.8, 0, frame)
 
     # (Callback on_event tidak lagi di dalam CameraProcessor, tapi di CameraManager)
