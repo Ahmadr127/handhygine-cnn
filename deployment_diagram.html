@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Deployment Diagram – Sistem Monitoring Kepatuhan Cuci Tangan</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      padding: 30px;
+    }
+    .diagram-wrapper {
+      background: white;
+      border: 1.5px solid #999;
+      border-radius: 4px;
+      padding: 20px 40px;
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      overflow-x: auto;
+      text-align: center;
+    }
+    .uc-label {
+      position: absolute;
+      top: 0;
+      left: 0;
+      font-size: 11px;
+      background: white;
+      border-right: 1.5px solid #999;
+      border-bottom: 1.5px solid #999;
+      padding: 2px 8px;
+      color: #333;
+    }
+    .caption {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 13px;
+      color: #222;
+    }
+  </style>
+</head>
+<body>
+  <div class="diagram-wrapper">
+    <span class="uc-label">deployment Deployment</span>
+    <div class="mermaid">
+      flowchart TD
+          classDef device fill:#fcfcfc,stroke:#333,stroke-width:1.5px;
+          classDef comp fill:#fdebeb,stroke:#cc7a7a,stroke-width:1.5px,rx:5px;
+          classDef nested fill:#fffaf9,stroke:#999,stroke-width:1px;
+
+          subgraph ServerNode ["&laquo;device&raquo;<br><b>Server Utama</b>"]
+              direction TB
+              subgraph PC ["PC / Server Fisik"]
+                  direction LR
+                  Apache["&laquo;component&raquo;<br>Apache / Nginx"]:::comp
+                  PHP["&laquo;component&raquo;<br>PHP"]:::comp
+                  Laravel["&laquo;component&raquo;<br>Laravel"]:::comp
+                  MySQL["&laquo;component&raquo;<br>MySQL"]:::comp
+                  Python["&laquo;component&raquo;<br>Python"]:::comp
+                  FastAPI["&laquo;component&raquo;<br>FastAPI"]:::comp
+                  YOLO["&laquo;component&raquo;<br>YOLOv8 &amp; ByteTrack"]:::comp
+              end
+          end
+          class ServerNode,PC device
+          class PC nested
+
+          subgraph ClientNode ["&laquo;device&raquo;<br><b>User (Admin / Petugas PPI)</b>"]
+              direction TB
+              subgraph Perangkat ["PC / Smartphone"]
+                  direction TB
+                  Browser["&laquo;component&raquo;<br>Web Browser"]:::comp
+              end
+          end
+          class ClientNode,Perangkat device
+          class Perangkat nested
+
+          subgraph CameraNode ["&laquo;device&raquo;<br><b>Kamera</b>"]
+              direction TB
+              subgraph HW ["Hardware"]
+                  direction TB
+                  CCTV["&laquo;component&raquo;<br>IP Camera / USB WebCam"]:::comp
+              end
+          end
+          class CameraNode,HW device
+          class HW nested
+
+          ServerNode &lt;--&gt;|"HTTPS / WSS (LAN/Internet)"| ClientNode
+          CameraNode --&gt;|"Video Stream (RTSP / USB)"| ServerNode
+    </div>
+  </div>
+
+  <p class="caption"><strong>Gambar 4.Y Deployment Diagram Sistem Monitoring Kepatuhan Cuci Tangan</strong></p>
+
+  <div style="margin-top: 24px; max-width:900px; font-size:13px; line-height:1.8; color:#333; background:#fff; border:1px solid #ddd; padding:16px; border-radius:6px;">
+      <strong>Penjelasan:</strong> Deployment diagram ini menunjukkan topologi perangkat keras dan perangkat lunak yang saling terhubung. Server utama memuat aplikasi web (Laravel, PHP, Apache), database (MySQL), dan servis kecerdasan buatan (Python, FastAPI, YOLOv8). Node Kamera bertugas merekam dan mengirimkan aliran video (video stream) ke server. Pengguna (Admin/Petugas PPI) mengakses sistem melalui Web Browser pada perangkat PC atau Smartphone menggunakan jaringan lokal maupun internet.
+    </p>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      securityLevel: 'loose'
+    });
+  </script>
+</body>
+</html>

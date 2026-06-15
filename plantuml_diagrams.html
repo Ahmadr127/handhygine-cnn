@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlantUML Diagrams – Sistem Monitoring Kepatuhan Cuci Tangan</title>
+  <meta name="description" content="Diagram kelas dan deployment sistem monitoring kepatuhan cuci tangan berbasis CNN/YOLOv8.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/plantuml-encoder@1.4.0/dist/plantuml-encoder.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #f0f2f5;
+      font-family: 'Inter', Arial, sans-serif;
+      padding: 36px 24px 60px;
+      color: #333;
+    }
+    .page-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .page-header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a1a2e;
+      letter-spacing: -0.3px;
+    }
+    .page-header p {
+      margin-top: 6px;
+      font-size: 13px;
+      color: #666;
+    }
+    .page-header .badge {
+      display: inline-block;
+      margin-top: 10px;
+      background: #e8f0fe;
+      color: #3b5bdb;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.3px;
+    }
+    .diagram-card {
+      background: #ffffff;
+      border: 1px solid #d5d8dc;
+      border-radius: 10px;
+      max-width: 1200px;
+      margin: 0 auto 48px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f7f8fc;
+      border-bottom: 1px solid #d5d8dc;
+      padding: 10px 16px;
+    }
+    .card-header .diagram-type-tag {
+      font-size: 11px;
+      font-weight: 600;
+      background: #dde2f0;
+      color: #3b4a6b;
+      padding: 2px 9px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+    .card-header .diagram-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    .card-body {
+      padding: 28px 24px 20px;
+      text-align: center;
+    }
+    .diagram-img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #e8eaf0;
+      border-radius: 6px;
+    }
+    .loading-msg {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #888;
+      font-style: italic;
+      padding: 60px 0;
+    }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid #d5d8dc;
+      border-top-color: #3b5bdb;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .card-caption {
+      margin-top: 14px;
+      font-size: 13px;
+      color: #444;
+      font-weight: 500;
+      text-align: center;
+      padding-bottom: 4px;
+    }
+    .card-caption span {
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-header">
+    <h1>Diagram Arsitektur Sistem</h1>
+    <p>Sistem Monitoring Kepatuhan Cuci Tangan Berbasis CNN</p>
+    <span class="badge">Di-render via PlantUML Web Server Resmi &mdash; plantuml.com</span>
+  </div>
+
+  <!-- CLASS DIAGRAM -->
+  <div class="diagram-card">
+    <div class="card-header">
+      <span class="diagram-type-tag">class</span>
+      <span class="diagram-title">Class Diagram Sistem Monitoring Kepatuhan Cuci Tangan</span>
+    </div>
+    <div class="card-body">
+      <div id="loading-class" class="loading-msg">
+        <div class="spinner"></div>
+        Memuat Class Diagram dari server PlantUML…
+      </div>
+      <img id="class-diagram" class="diagram-img" alt="Class Diagram" style="display:none;"
+           onload="document.getElementById('loading-class').style.display='none'; this.style.display='inline-block';"
+           onerror="document.getElementById('loading-class').innerHTML='&#10060; Gagal memuat. Pastikan koneksi internet aktif.';" />
+      <p class="card-caption"><span>Gambar A.</span> Class Diagram – Sistem Monitoring Kepatuhan Cuci Tangan</p>
+    </div>
+  </div>
+
+  <!-- DEPLOYMENT DIAGRAM -->
+  <div class="diagram-card">
+    <div class="card-header">
+      <span class="diagram-type-tag">deployment</span>
+      <span class="diagram-title">Deployment Diagram Sistem Monitoring Kepatuhan Cuci Tangan</span>
+    </div>
+    <div class="card-body">
+      <div id="loading-deploy" class="loading-msg">
+        <div class="spinner"></div>
+        Memuat Deployment Diagram dari server PlantUML…
+      </div>
+      <img id="deployment-diagram" class="diagram-img" alt="Deployment Diagram" style="display:none;"
+           onload="document.getElementById('loading-deploy').style.display='none'; this.style.display='inline-block';"
+           onerror="document.getElementById('loading-deploy').innerHTML='&#10060; Gagal memuat. Pastikan koneksi internet aktif.';" />
+      <p class="card-caption"><span>Gambar B.</span> Deployment Diagram – Sistem Monitoring Kepatuhan Cuci Tangan</p>
+    </div>
+  </div>
+
+  <script>
+    /* ================================================================
+       CLASS DIAGRAM
+       - top to bottom direction: hierarki layer dari atas ke bawah
+       - together{}: paksa kelas berada di rank/baris yang sama
+       - nodesep 20, ranksep 30: jarak antar node diperkecil
+       - warna inline #body/header: diterapkan langsung per class
+       ================================================================ */
+    const classUml = `
+@startuml
+top to bottom direction
+skinparam classAttributeIconSize 0
+skinparam dpi 130
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+skinparam classFontSize 11
+skinparam classFontStyle bold
+skinparam classStereotypeFontSize 9
+skinparam roundCorner 6
+skinparam shadowing false
+skinparam nodesep 20
+skinparam ranksep 30
+skinparam linetype ortho
+skinparam ArrowColor #666666
+skinparam ArrowFontSize 9
+skinparam ArrowFontColor #555555
+
+' ── LAYER 1: Sistem Utama ─────────────────────────────────────────
+class SistemMonitoring #FAFAFA/E0E0E0 {
+}
+
+' ── LAYER 2: Dashboard ───────────────────────────────────────────
+interface Dashboard <<interface>> #E8E0FF/C9BFEE {
+}
+SistemMonitoring *--> Dashboard : bergantung
+
+' ── LAYER 3: Menu Utama (4 menu sejajar) ─────────────────────────
+together {
+  interface Login <<interface>> #E8E0FF/C9BFEE {}
+  interface ManajemenKamera <<interface>> #E8E0FF/C9BFEE {}
+  interface PemantauanKepatuhan <<interface>> #E8E0FF/C9BFEE {}
+  interface RiwayatMonitoring <<interface>> #E8E0FF/C9BFEE {}
+}
+
+Dashboard o--> Login                 : memiliki
+Dashboard o--> ManajemenKamera       : memiliki
+Dashboard o--> PemantauanKepatuhan   : memiliki
+Dashboard o--> RiwayatMonitoring     : memiliki
+
+' ── LAYER 4a: Halaman Login (sejajar) ────────────────────────────
+together {
+  interface LamanLogin <<interface>> #E8E0FF/C9BFEE {
+    + email : String
+    + password : String
+    --
+    + buttonLogin() : void
+  }
+  interface LamanGantiPassword <<interface>> #E8E0FF/C9BFEE {
+    + passwordLama : String
+    + passwordBaru : String
+    + konfirmasiPassword : String
+    --
+    + buttonSimpan() : void
+  }
+}
+
+' ── LAYER 4b: Halaman ManajemenKamera (sejajar) ──────────────────
+together {
+  interface LamanKamera <<interface>> #E8E0FF/C9BFEE {
+    + namaKamera : String
+    + tipe : String
+    + source : String
+    --
+    + buttonScanUSB() : void
+    + buttonSimpan() : void
+  }
+  interface LamanZona <<interface>> #E8E0FF/C9BFEE {
+    + namaZona : String
+    + tipeZona : String
+    + polygonPoints : String
+    --
+    + buttonSimpanZona() : void
+  }
+  interface LamanGrupMonitoring <<interface>> #E8E0FF/C9BFEE {
+    + namaGrup : String
+    + deskripsi : String
+    + lokasi : String
+    --
+    + buttonSimpan() : void
+  }
+}
+
+' ── LAYER 4c & 4d: Halaman pemantauan & riwayat ─────────────────
+together {
+  interface LamanDashboard <<interface>> #E8E0FF/C9BFEE {
+    + selectedGroup : Integer
+    --
+    + buttonConnect() : void
+    + buttonStop() : void
+  }
+  interface LamanRiwayatLog <<interface>> #E8E0FF/C9BFEE {
+    + filterStatus : String
+    + filterCameraId : Integer
+    + filterDateFrom : Date
+    + filterDateTo : Date
+    --
+    + buttonFilter() : void
+  }
+}
+
+Login               o--> LamanLogin          : memiliki
+Login               o--> LamanGantiPassword  : memiliki
+ManajemenKamera     o--> LamanKamera         : memiliki
+ManajemenKamera     o--> LamanZona           : memiliki
+ManajemenKamera     o--> LamanGrupMonitoring : memiliki
+PemantauanKepatuhan o--> LamanDashboard      : memiliki
+RiwayatMonitoring   o--> LamanRiwayatLog     : memiliki
+
+' ── LAYER 5: Proses (semua sejajar) ──────────────────────────────
+together {
+  class ProsesValidasi #FFF4DC/FFE4A0 {
+    - email : String
+    - password : String
+    --
+    + autentikasi() : void
+    + keluar() : void
+    + gantiPassword() : void
+  }
+  class ProsesKelolaKamera #FFF4DC/FFE4A0 {
+    - namaKamera : String
+    - tipe : String
+    - source : String
+    --
+    + tampilkan() : void
+    + simpan() : void
+    + scanUsb() : void
+    + simpanZona() : void
+    + sinkronAI() : void
+  }
+  class ProsesKelolaGrup #FFF4DC/FFE4A0 {
+    - namaGrup : String
+    - deskripsi : String
+    - lokasi : String
+    --
+    + tampilkan() : void
+    + simpan() : void
+    + hapus() : void
+  }
+  class ProsesDashboard #FFF4DC/FFE4A0 {
+    - selectedGroupId : Integer
+    --
+    + tampilkan() : void
+    + mulaiKamera() : void
+    + hentikanKamera() : void
+  }
+  class ProsesDeteksiAI #FFF4DC/FFE4A0 {
+    - cameraId : Integer
+    - frame : String
+    - detections : String
+    --
+    + mulaiStream() : void
+    + hentikanStream() : void
+    + deteksi() : void
+    + catatLog() : void
+    + simpanSnapshot() : void
+  }
+  class ProsesMonitoring #FFF4DC/FFE4A0 {
+    - status : String
+    - cameraId : Integer
+    - dateFrom : Date
+    - dateTo : Date
+    --
+    + tampilkan() : void
+    + filter() : void
+  }
+}
+
+LamanLogin          --> ProsesValidasi     : melakukan
+LamanGantiPassword  --> ProsesValidasi     : melakukan
+LamanKamera         --> ProsesKelolaKamera : melakukan
+LamanZona           --> ProsesKelolaKamera : melakukan
+LamanGrupMonitoring --> ProsesKelolaGrup   : melakukan
+LamanDashboard      --> ProsesDashboard    : melakukan
+LamanDashboard      --> ProsesDeteksiAI    : melakukan
+LamanRiwayatLog     --> ProsesMonitoring   : melakukan
+
+' ── LAYER 6: Tabel Database (semua sejajar) ──────────────────────
+together {
+  class users <<table>> #DDEEFF/B0CCEE {
+    <<column>>
+    *PK id : INT
+    + name : VARCHAR
+    + email : VARCHAR
+    + password : VARCHAR
+    ..
+    <<PK>>
+    + PK_users(int)
+  }
+  class cameras <<table>> #DDEEFF/B0CCEE {
+    <<column>>
+    *PK id : INT
+    + nama_kamera : VARCHAR
+    + tipe : VARCHAR
+    + source : VARCHAR
+    + aktif : BOOLEAN
+    ..
+    <<PK>>
+    + PK_cameras(int)
+    <<FK>>
+    + FK_group_id
+  }
+  class zones <<table>> #DDEEFF/B0CCEE {
+    <<column>>
+    *PK id : INT
+    + nama_zona : VARCHAR
+    + tipe_zona : VARCHAR
+    + polygon_points : JSON
+    ..
+    <<PK>>
+    + PK_zones(int)
+    <<FK>>
+    + FK_camera_id
+  }
+  class monitoring_groups <<table>> #DDEEFF/B0CCEE {
+    <<column>>
+    *PK id : INT
+    + nama_grup : VARCHAR
+    + deskripsi : TEXT
+    + lokasi : VARCHAR
+    + aktif : BOOLEAN
+    ..
+    <<PK>>
+    + PK_monitoring_groups(int)
+  }
+  class monitoring_logs <<table>> #DDEEFF/B0CCEE {
+    <<column>>
+    *PK id : INT
+    + person_id : VARCHAR
+    + status : VARCHAR
+    + waktu : DATETIME
+    + confidence : FLOAT
+    + snapshot_path : VARCHAR
+    ..
+    <<PK>>
+    + PK_monitoring_logs(int)
+    <<FK>>
+    + FK_camera_id
+    <<FK>>
+    + FK_group_id
+  }
+}
+
+ProsesValidasi     --> users             : mengakses
+ProsesKelolaGrup   --> monitoring_groups : mengakses
+ProsesKelolaKamera --> cameras           : mengakses
+ProsesKelolaKamera --> zones             : mengakses
+ProsesDashboard    --> monitoring_groups : mengakses
+ProsesDashboard    --> monitoring_logs   : mengakses
+ProsesMonitoring   --> monitoring_logs   : mengakses
+ProsesDeteksiAI    --> monitoring_logs   : mengakses
+
+@enduml
+`;
+
+    /* ================================================================
+       DEPLOYMENT DIAGRAM
+       ================================================================ */
+    const deploymentUml = `
+@startuml
+skinparam dpi 130
+top to bottom direction
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam nodesep 20
+skinparam ranksep 30
+skinparam nodeBackgroundColor #FFF8F8
+skinparam nodeBorderColor     #CC7A7A
+skinparam componentBackgroundColor #FDEBEB
+skinparam componentBorderColor     #CC7A7A
+
+node "Kamera Hardware" <<device>> as NodeKamera {
+    component "IP Camera / USB WebCam" as CompCCTV
+}
+
+node "Server Utama (PC / Server Fisik)" <<device>> as NodeServer {
+    node "Web Server" as EnvWeb {
+        component "Apache / Nginx" as CompApache
+        component "PHP"            as CompPHP
+        component "Laravel"        as CompLaravel
+    }
+    node "Database Server" as EnvDB {
+        component "MySQL" as CompMySQL
+    }
+    node "AI Runtime" as EnvAI {
+        component "Python"             as CompPython
+        component "FastAPI"            as CompFastAPI
+        component "YOLOv8 + ByteTrack" as CompYOLO
+    }
+}
+
+node "Client (Admin / Petugas PPI)" <<device>> as NodeClient {
+    component "Web Browser" as CompBrowser
+}
+
+NodeKamera --> NodeServer : <<RTSP / USB>>
+NodeServer --> NodeClient : <<HTTPS / WSS>>
+
+@enduml
+`;
+
+    /* ================================================================
+       ENCODE & RENDER
+       ================================================================ */
+    const encodedClass  = plantumlEncoder.encode(classUml);
+    const encodedDeploy = plantumlEncoder.encode(deploymentUml);
+
+    document.getElementById('class-diagram').src      = 'https://www.plantuml.com/plantuml/svg/' + encodedClass;
+    document.getElementById('deployment-diagram').src = 'https://www.plantuml.com/plantuml/svg/' + encodedDeploy;
+  </script>
+
+</body>
+</html>

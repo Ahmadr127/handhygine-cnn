@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Class Diagram – Sistem Monitoring Kepatuhan Cuci Tangan</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      padding: 30px;
+    }
+    .diagram-wrapper {
+      background: white;
+      border: 1.5px solid #999;
+      border-radius: 4px;
+      padding: 20px;
+      position: relative;
+      width: 100%;
+      max-width: 1100px;
+      overflow-x: auto;
+      text-align: center;
+    }
+    .uc-label {
+      position: absolute;
+      top: 0;
+      left: 0;
+      font-size: 11px;
+      background: white;
+      border-right: 1.5px solid #999;
+      border-bottom: 1.5px solid #999;
+      padding: 2px 8px;
+      color: #333;
+    }
+    .caption {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 13px;
+      color: #222;
+    }
+  </style>
+</head>
+<body>
+  <div class="diagram-wrapper">
+    <span class="uc-label">class Class Diagram</span>
+    <div class="mermaid">
+      classDiagram
+        direction TB
+        class SistemMonitoring {
+            Sistem Monitoring Kepatuhan Cuci Tangan
+        }
+        class Dashboard {
+            &lt;&lt;interface&gt;&gt;
+            Dashboard
+        }
+        SistemMonitoring *-- Dashboard : Bergantung
+
+        class LoginInt {
+            &lt;&lt;interface&gt;&gt;
+            Login
+        }
+        class KameraInt {
+            &lt;&lt;interface&gt;&gt;
+            Manajemen Kamera &amp; Zona
+        }
+        class LogInt {
+            &lt;&lt;interface&gt;&gt;
+            Riwayat &amp; Laporan Log
+        }
+
+        Dashboard o-- LoginInt : memiliki
+        Dashboard o-- KameraInt : memiliki
+        Dashboard o-- LogInt : memiliki
+
+        class LamanLogin {
+            &lt;&lt;interface&gt;&gt;
+            Laman Login
+            + Username: char
+            + Password: char
+            + button_login()
+        }
+        LoginInt o-- LamanLogin : memiliki
+
+        class LamanKamera {
+            &lt;&lt;interface&gt;&gt;
+            Laman Kamera &amp; Zona
+            + nama_kamera: char
+            + source: char
+            + polygon_points: json
+            + button_simpan()
+        }
+        KameraInt o-- LamanKamera : memiliki
+
+        class LamanLog {
+            &lt;&lt;interface&gt;&gt;
+            Laman Laporan Log
+            + filter_tanggal: date
+            + filter_kamera: int
+            + button_filter()
+        }
+        LogInt o-- LamanLog : memiliki
+
+        class ProsesAuth {
+            Proses Validasi
+            - Username: char
+            - Password: char
+            + get_data(): void
+        }
+        LamanLogin --&gt; ProsesAuth : melakukan
+
+        class ProsesKameraAI {
+            Proses Kelola &amp; Deteksi
+            - id: int
+            - frame: image
+            - bbox: array
+            + store()
+            + detect()
+        }
+        LamanKamera --&gt; ProsesKameraAI : melakukan
+
+        class ProsesLog {
+            Proses Cek Log
+            - camera_id: int
+            - waktu: datetime
+            + get_data()
+        }
+        LamanLog --&gt; ProsesLog : melakukan
+
+        class TabelUsers {
+            users
+            &lt;&lt;column&gt;&gt; username: varchar
+            &lt;&lt;column&gt;&gt; password: varchar
+        }
+        ProsesAuth --&gt; TabelUsers : melakukan
+
+        class TabelCameras {
+            cameras &amp; zones
+            &lt;&lt;column&gt;&gt; nama_kamera: varchar
+            &lt;&lt;column&gt;&gt; tipe_zona: varchar
+            &lt;&lt;column&gt;&gt; polygon_points: json
+        }
+        ProsesKameraAI --&gt; TabelCameras : melakukan
+
+        class TabelLogs {
+            monitoring_logs
+            &lt;&lt;column&gt;&gt; status: varchar
+            &lt;&lt;column&gt;&gt; waktu: datetime
+            &lt;&lt;column&gt;&gt; snapshot_path: varchar
+        }
+        ProsesKameraAI --&gt; TabelLogs : melakukan
+        ProsesLog --&gt; TabelLogs : melakukan
+    </div>
+  </div>
+
+  <p class="caption"><strong>Gambar 4.X Class Diagram Sistem Monitoring Kepatuhan Cuci Tangan</strong></p>
+
+  <div style="margin-top: 24px; max-width:1100px; font-size:13px; line-height:1.8; color:#333; background:#fff; border:1px solid #ddd; padding:16px; border-radius:6px;">
+    <p>
+      <strong>Penjelasan:</strong> Diagram kelas ini merancang struktur antarmuka dan proses yang saling bergantung pada Sistem Monitoring Kepatuhan Cuci Tangan. Kelas utama bergantung pada <em>Dashboard</em> yang memuat beberapa antarmuka seperti <em>Login</em>, <em>Kamera &amp; Zona</em>, serta <em>Laporan Log</em>. Setiap antarmuka memiliki lamannya masing-masing yang akan memicu proses validasi, deteksi, atau penarikan data yang kemudian akan mengakses tabel di database sesuai entitas yang dibutuhkan.
+    </p>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      securityLevel: 'loose'
+    });
+  </script>
+</body>
+</html>
