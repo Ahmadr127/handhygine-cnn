@@ -223,6 +223,11 @@ class CameraProcessor:
             if in_door:
                 self.group_engine.report_door_entry(self.camera_id, frame)
 
+            # Cek status akhir dari compliance engine (Patuh/Tidak Patuh)
+            final_status = self.group_engine.get_person_status(str(tid))
+            if final_status:
+                state = final_status
+
             label = f"#{tid} {STATE_LABELS_ID.get(state, state)}"
             labels.append(label)
             colors.append(STATE_COLORS.get(state, (200, 200, 200)))

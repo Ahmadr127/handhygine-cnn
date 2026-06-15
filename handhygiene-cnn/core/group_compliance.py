@@ -29,9 +29,11 @@ class GroupComplianceEngine:
         
         # Data snapshot sementara untuk dikirim saat event
         self.last_person_id = ""
-        self.last_camera_id = None
         self.last_frame = None
         self.last_confidence = 0.0
+
+        # Menyimpan status final per orang (person_id) selama beberapa detik untuk label video
+        self.person_status = {}
 
     def report_instrument(self, camera_id: int, person_id: str, confidence: float, frame):
         with self.lock:
@@ -69,6 +71,9 @@ class GroupComplianceEngine:
             self.state = GroupState.IDLE
 
     def _fire_event(self, status: str, frame, trigger_camera_id: int):
+        # Simpan status akhir agar box di video berubah warna menjadi hijau/merah
+        self.person_status[self.last_person_id] = (status, time.time())
+
         if self.on_event:
             self.on_event({
                 "group_id": self.group_id,
@@ -79,3 +84,13 @@ class GroupComplianceEngine:
                 "aktivitas_cuci_tangan": (status == "patuh"),
                 "confidence": self.last_confidence
             }, frame)
+
+    def get_person_status(self, person_id: str) -> str:
+        with self.lock:
+            if person_id in self.person_status:
+                status, ts = self.person_status[person_id]
+                if time.time() - ts < 5.0:  # Tampilkan label Patuh/Tidak Patuh selama 5 detik
+                    return status
+                else:
+                    del self.person_status[person_id]
+            return None

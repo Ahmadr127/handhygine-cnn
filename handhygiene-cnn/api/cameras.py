@@ -92,9 +92,8 @@ def add_zone(camera_id: int, data: ZoneCreate):
     if data.tipe_zona not in ("sanitizer", "wastafel", "pintu"):
         raise HTTPException(400, "tipe_zona harus 'sanitizer', 'wastafel', atau 'pintu'")
 
-    upsert_zone(data.group_id, camera_id, data.nama_zona, data.tipe_zona, data.polygon_points)
-
-    # Reload zone di processor yang sedang berjalan
+    # Tidak perlu insert DB di sini karena Laravel sudah menyimpannya.
+    # Kita hanya perlu reload zone di processor yang sedang berjalan.
     proc = camera_manager.get_processor(camera_id)
     if proc:
         proc.zone_mgr.reload()

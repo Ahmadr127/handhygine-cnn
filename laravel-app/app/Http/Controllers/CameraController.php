@@ -99,13 +99,17 @@ class CameraController extends Controller
             return response()->json(['success' => false, 'message' => 'Kamera belum masuk ke grup mana pun.'], 400);
         }
 
-        $zone = Zone::create([
-            'group_id'       => $camera->group_id,
-            'camera_id'      => $camera->id,
-            'nama_zona'      => $validated['nama_zona'],
-            'tipe_zona'      => $validated['tipe_zona'],
-            'polygon_points' => $validated['polygon_points'],
-        ]);
+        $zone = Zone::updateOrCreate(
+            [
+                'camera_id' => $camera->id,
+                'nama_zona' => $validated['nama_zona'],
+            ],
+            [
+                'group_id'       => $camera->group_id,
+                'tipe_zona'      => $validated['tipe_zona'],
+                'polygon_points' => $validated['polygon_points'],
+            ]
+        );
 
         // Sync ke AI Service
         try {

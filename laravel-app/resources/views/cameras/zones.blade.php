@@ -186,10 +186,6 @@
     </div>
 </div>
 
-<!-- Delete zone form -->
-<form id="deleteZoneForm" method="POST" style="display:none;">
-    @csrf @method('DELETE')
-</form>
 
 @endsection
 
@@ -349,9 +345,17 @@
 
     async function deleteZone(id) {
         if (!confirm('Hapus zona ini?')) return;
-        const form = document.getElementById('deleteZoneForm');
-        form.action = `/cameras/zones/${id}`;
-        form.submit();
+        
+        const res = await fetch(`/cameras/zones/${id}`, {
+            method: 'DELETE',
+            headers: { 'X-CSRF-TOKEN': CSRF }
+        });
+
+        if (res.ok) {
+            location.reload();
+        } else {
+            alert('❌ Gagal menghapus zona');
+        }
     }
 
     // Initial draw existing zones
@@ -359,15 +363,10 @@
 
     // Video Stream WebSocket
     const AI_WS = '{{ config('services.handhygiene-cnn.ws_url', 'ws://localhost:8001') }}';
-    const ws = new WebSocket(`${AI_WS}/ws/stream/${CAMERA_ID}`);
     const videoStream = document.getElementById('videoStream');
     const loadingStream = document.getElementById('loadingStream');
 
-    ws.onopen = () => {
-        console.log('WebSocket connected for stream');
-        // Ensure camera is started in AI service
-        fetch(`${AI_WS.replace('ws://', 'http://')}/api/cameras/${CAMERA_ID}/start`, {method: 'POST'}).catch(() => {});
-    };
+    const ws = new WebSocket(`${AI_WS}/ws/preview/${CAMERA_ID}`);
 
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);

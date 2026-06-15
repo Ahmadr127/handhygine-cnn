@@ -125,14 +125,6 @@
                 {{ $cam->aktif ? '● AKTIF' : '○ OFF' }}
             </span>
             <div class="cam-actions">
-                <!-- Start/Stop -->
-                <button class="btn btn-sm {{ $cam->aktif ? 'btn-danger' : 'btn-success' }}"
-                        id="toggleBtn-{{ $cam->id }}"
-                        onclick="toggleCamera({{ $cam->id }}, {{ $cam->aktif ? 'false' : 'true' }})">
-                    {{ $cam->aktif ? '⏹ Stop' : '▶ Start' }}
-                </button>
-                <!-- Zona -->
-                <a href="{{ route('cameras.zones', $cam) }}" class="btn btn-ghost btn-sm">🗺 Zona</a>
                 <!-- Hapus -->
                 <button class="btn btn-danger btn-sm"
                         onclick="deleteCamera({{ $cam->id }}, '{{ $cam->nama_kamera }}')">
@@ -265,42 +257,6 @@
         }
 
         btn.textContent = '🔍';
-        btn.disabled = false;
-    }
-
-    async function toggleCamera(id, start) {
-        const btn = document.getElementById(`toggleBtn-${id}`);
-        const badge = document.getElementById(`badge-${id}`);
-        btn.disabled = true;
-        btn.textContent = '⏳';
-
-        try {
-            const endpoint = start ? 'start' : 'stop';
-            const res = await fetch(`/cameras/${id}/${endpoint}`, {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                if (start) {
-                    btn.textContent = '⏹ Stop';
-                    btn.className = 'btn btn-sm btn-danger';
-                    btn.onclick = () => toggleCamera(id, false);
-                    badge.textContent = '● AKTIF';
-                    badge.className = 'cam-badge aktif';
-                } else {
-                    btn.textContent = '▶ Start';
-                    btn.className = 'btn btn-sm btn-success';
-                    btn.onclick = () => toggleCamera(id, true);
-                    badge.textContent = '○ OFF';
-                    badge.className = 'cam-badge nonaktif';
-                }
-            }
-        } catch {
-            alert('Gagal: AI Service tidak tersedia');
-        }
-
         btn.disabled = false;
     }
 

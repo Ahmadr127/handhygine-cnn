@@ -65,11 +65,6 @@
                 </span>
                 
                 <div style="display:flex; gap:6px;">
-                    <button class="btn btn-sm {{ $group->aktif ? 'btn-danger' : 'btn-success' }}"
-                            id="toggleBtn-{{ $group->id }}"
-                            onclick="toggleGroup({{ $group->id }}, {{ $group->aktif ? 'false' : 'true' }})">
-                        {{ $group->aktif ? '⏹ Stop' : '▶ Start' }}
-                    </button>
                     <a href="{{ route('groups.show', $group) }}" class="btn btn-primary btn-sm">Kelola</a>
                     <button class="btn btn-danger btn-sm" onclick="deleteGroup({{ $group->id }}, '{{ $group->nama_grup }}')">🗑</button>
                 </div>
@@ -124,44 +119,6 @@
 
 @push('scripts')
 <script>
-    async function toggleGroup(id, start) {
-        const btn = document.getElementById(`toggleBtn-${id}`);
-        const badge = document.getElementById(`badge-${id}`);
-        btn.disabled = true;
-        btn.textContent = '⏳';
-
-        try {
-            const endpoint = start ? 'start' : 'stop';
-            const res = await fetch(`/groups/${id}/${endpoint}`, {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                if (start) {
-                    btn.textContent = '⏹ Stop';
-                    btn.className = 'btn btn-sm btn-danger';
-                    btn.onclick = () => toggleGroup(id, false);
-                    badge.textContent = '● GRUP AKTIF';
-                    badge.className = 'group-badge aktif';
-                } else {
-                    btn.textContent = '▶ Start';
-                    btn.className = 'btn btn-sm btn-success';
-                    btn.onclick = () => toggleGroup(id, true);
-                    badge.textContent = '○ GRUP OFF';
-                    badge.className = 'group-badge nonaktif';
-                }
-            } else {
-                alert('Gagal: ' + data.message);
-            }
-        } catch {
-            alert('Gagal: AI Service tidak tersedia');
-        }
-
-        btn.disabled = false;
-    }
-
     function deleteGroup(id, name) {
         if (!confirm(`Hapus grup "${name}" dan semua zonanya? (Kamera tidak akan terhapus, hanya keluar dari grup)`)) return;
         const form = document.getElementById('deleteForm');
