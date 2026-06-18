@@ -70,6 +70,19 @@ class ZoneManager:
         zones = self.check_point(x, y)
         return "sanitizer" in zones or "wastafel" in zones
 
+    def bbox_intersects_handwash_zone(self, x1: float, y1: float, x2: float, y2: float) -> bool:
+        """
+        True jika bounding box (x1,y1,x2,y2) bersentuhan atau overlap dengan zona wastafel/sanitizer.
+        Lebih fleksibel dibanding cek satu titik — cocok untuk gerakan tidak konsisten.
+        """
+        from shapely.geometry import box as shapely_box
+        person_rect = shapely_box(x1, y1, x2, y2)
+        for zone in self.zones:
+            if zone["tipe"] in ("sanitizer", "wastafel"):
+                if zone["polygon"].intersects(person_rect):
+                    return True
+        return False
+
     def is_in_door_zone(self, x: float, y: float) -> bool:
         """True jika titik ada di zona pintu."""
         zones = self.check_point(x, y)

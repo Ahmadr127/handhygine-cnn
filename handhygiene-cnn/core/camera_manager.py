@@ -41,9 +41,14 @@ STATE_LABELS_ID = {
     "monitoring":          "Monitoring",
     "carrying_instrument": "Membawa Instrumen",
     "hand_wash_zone":      "Cuci Tangan",
+    "hand_wash_pending":   "Cuci Tangan...",
+    "hand_washed_done":    "Sudah Cuci Tangan ✓",
     "patuh":               "PATUH",
     "tidak_patuh":         "TIDAK PATUH",
 }
+
+STATE_COLORS["hand_wash_pending"] = (200, 200, 0)    # kuning redup (sedang dwell)
+STATE_COLORS["hand_washed_done"] = (0, 200, 150)    # hijau-tosca (sudah cuci, belum pintu)
 
 
 class CameraProcessor:
@@ -69,7 +74,7 @@ class CameraProcessor:
         self.box_annotator = sv.BoxAnnotator(thickness=2)
         self.label_annotator = sv.LabelAnnotator(text_scale=0.5)
         
-        self.handwash_dwell_timers = {}
+        self.handwash_dwell_timers: dict[int, float] = {}
         self._thread: threading.Thread | None = None
 
     # ─── Start / Stop ────────────────────────────────────────────────────────
@@ -184,21 +189,30 @@ class CameraProcessor:
             bbox = persons.xyxy[i]
             conf = float(persons.confidence[i])
 
-            # Posisi bawah tengah (posisi kaki) untuk zone check
+            # Posisi bawah tengah (kaki) dan tengah bounding box
             bx, by = Tracker.get_bottom_center(bbox)
             cx, cy = Tracker.get_center(bbox)
 
-            # Scale bx, by to 800x450 reference size since zones are drawn on 800x450 UI canvas
+            # Scale ke 800x450 reference (zona digambar di canvas 800x450 UI)
             h_frame, w_frame = frame.shape[:2]
             scale_x_ref = 800.0 / w_frame
             scale_y_ref = 450.0 / h_frame
             bx_scaled = bx * scale_x_ref
             by_scaled = by * scale_y_ref
+            cx_scaled = cx * scale_x_ref
+            cy_scaled = cy * scale_y_ref
 
             # Cek apakah membawa instrumen (overlap/proximity)
             near_instrument = self._is_near_instrument(bbox, instr_boxes)
 
-            in_handwash = self.zone_mgr.is_in_handwash_zone(bx_scaled, by_scaled)
+            # Zona wastafel: cek intersection bounding box orang vs polygon zona
+            # Lebih fleksibel dari cek satu titik — cocok untuk gerakan yang tidak konsisten
+            x1s, y1s, x2s, y2s = (
+                bbox[0] * scale_x_ref, bbox[1] * scale_y_ref,
+                bbox[2] * scale_x_ref, bbox[3] * scale_y_ref,
+            )
+            in_handwash = self.zone_mgr.bbox_intersects_handwash_zone(x1s, y1s, x2s, y2s)
+            # Zona pintu: tetap pakai titik kaki (lebih akurat untuk deteksi masuk pintu)
             in_door = self.zone_mgr.is_in_door_zone(bx_scaled, by_scaled)
 
             state = "monitoring"
@@ -207,26 +221,41 @@ class CameraProcessor:
                 self.group_engine.report_instrument(self.camera_id, str(tid), conf, frame)
                 state = "carrying_instrument"
 
-            # Logika menetap (Dwell Time) di area cuci tangan minimal 2 detik
+            # Zona wastafel: bbox menyentuh zona → mulai dwell timer
+            # Konfirmasi cuci tangan setelah 2 detik menetap (toleran terhadap gerakan tidak konsisten)
             if in_handwash:
                 if tid not in self.handwash_dwell_timers:
                     self.handwash_dwell_timers[tid] = time.time()
-                
+
                 dwell = time.time() - self.handwash_dwell_timers[tid]
                 if dwell >= 2.0:
-                    self.group_engine.report_hand_wash(self.camera_id)
-                    state = "hand_wash_zone"
+                    # Kirim frame untuk fallback snapshot
+                    self.group_engine.report_hand_wash(self.camera_id, str(tid), frame)
+                    state = "hand_wash_zone"     # Terkonfirmasi (≥2 detik)
+                else:
+                    state = "hand_wash_pending"  # Bbox menyentuh zona, menunggu 2 detik
             else:
+                # Keluar zona: timer TIDAK direset agar gerakan tidak konsisten tidak batalkan
+                # Timer hanya direset jika keluar zona lebih dari 3 detik
                 if tid in self.handwash_dwell_timers:
-                    del self.handwash_dwell_timers[tid]
+                    gap = time.time() - self.handwash_dwell_timers[tid]
+                    if gap > 5.0:  # grace period: boleh keluar zona max 5 detik
+                        del self.handwash_dwell_timers[tid]
 
             if in_door:
-                self.group_engine.report_door_entry(self.camera_id, frame)
+                self.group_engine.report_door_entry(self.camera_id, str(tid), frame)
 
             # Cek status akhir dari compliance engine (Patuh/Tidak Patuh)
             final_status = self.group_engine.get_person_status(str(tid))
             if final_status:
                 state = final_status
+            elif state not in ("hand_wash_zone", "hand_wash_pending", "carrying_instrument"):
+                # Tampilkan state engine internal untuk monitoring
+                engine_state = self.group_engine.get_engine_state(str(tid))
+                if engine_state == "hand_washed":
+                    state = "hand_washed_done"    # Sudah cuci tangan, menuju pintu
+                elif engine_state == "carrying":
+                    state = "carrying_instrument"  # Engine confirm membawa instrumen
 
             label = f"#{tid} {STATE_LABELS_ID.get(state, state)}"
             labels.append(label)
@@ -249,20 +278,29 @@ class CameraProcessor:
 
         return annotated
 
-    def _is_near_instrument(self, person_bbox, instr_boxes, threshold=0.3) -> bool:
+    def _is_near_instrument(self, person_bbox, instr_boxes, overlap_threshold=0.5) -> bool:
         """
-        Cek apakah ada instrumen yang overlap atau sangat dekat dengan person.
-        Menggunakan IoU sederhana atau proximity check.
+        Cek apakah instrumen berada di dalam atau sangat dekat dengan bounding box orang.
+
+        Menggunakan rasio overlap terhadap luas instrumen (bukan IoU), karena instrumen
+        yang dibawa selalu berada DI DALAM bbox orang sehingga IoU-nya kecil meskipun
+        sepenuhnya overlap.
+
+        overlap_ratio = intersection_area / instrument_area
+        Jika > overlap_threshold (default 50%) → dianggap membawa instrumen.
         """
         if len(instr_boxes) == 0:
             return False
 
         px1, py1, px2, py2 = person_bbox
-        p_area = (px2 - px1) * (py2 - py1)
 
         for ib in instr_boxes:
             ix1, iy1, ix2, iy2 = ib
-            # Intersection
+            i_area = (ix2 - ix1) * (iy2 - iy1)
+            if i_area <= 0:
+                continue
+
+            # Hitung intersection
             inter_x1 = max(px1, ix1)
             inter_y1 = max(py1, iy1)
             inter_x2 = min(px2, ix2)
@@ -270,10 +308,9 @@ class CameraProcessor:
 
             if inter_x2 > inter_x1 and inter_y2 > inter_y1:
                 inter_area = (inter_x2 - inter_x1) * (inter_y2 - inter_y1)
-                i_area = (ix2 - ix1) * (iy2 - iy1)
-                union = p_area + i_area - inter_area
-                iou = inter_area / union if union > 0 else 0
-                if iou > threshold:
+                # Rasio: seberapa banyak instrumen yang ada di dalam bbox orang
+                overlap_ratio = inter_area / i_area
+                if overlap_ratio > overlap_threshold:
                     return True
 
         return False
@@ -336,12 +373,16 @@ class CameraManager:
         if proc:
             camera_name = proc.nama
 
-        snap_path = save_snapshot(
-            frame,
-            person_id=event_data["person_id"],
-            status=status,
-            camera_name=camera_name,
-        )
+        if frame is None:
+            print(f"[GroupCompliance] Peringatan: frame None untuk event {status}, snapshot dilewati.")
+            snap_path = None
+        else:
+            snap_path = save_snapshot(
+                frame,
+                person_id=event_data["person_id"],
+                status=status,
+                camera_name=camera_name,
+            )
 
         try:
             log_id = insert_monitoring_log(

@@ -15,7 +15,7 @@ class Tracker:
     def __init__(self):
         self.byte_track = sv.ByteTrack(
             track_activation_threshold=0.35,
-            lost_track_buffer=30,
+            lost_track_buffer=150,   # ~10 detik pada 15fps: pertahankan ID saat keluar frame sementara
             minimum_matching_threshold=0.8,
             frame_rate=15,
         )
