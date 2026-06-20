@@ -17,7 +17,7 @@ from datetime import datetime
 
 from config import (
     FRAME_QUEUE_SIZE, STREAM_FPS,
-    CLASS_PERSON, INSTRUMENT_CLASSES, HANDWASH_CLASSES, CLASS_PINTU,
+    CLASS_PERSON, INSTRUMENT_CLASSES,
     CLASS_NAMES,
 )
 from core.detector import Detector

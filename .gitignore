@@ -16,6 +16,7 @@ pip-log.txt
 # YOLO Weights & Large Dataset Outputs
 *.pt
 /models/handwash_v1/
+/models/handwash_v1_lama/
 /dataset/
 /snapshots/
 

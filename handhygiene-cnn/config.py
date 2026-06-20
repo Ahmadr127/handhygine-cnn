@@ -27,24 +27,15 @@ CLASS_NAMES = {
     0: "tenaga_kesehatan",
     1: "baki_medis",
     2: "troli_medis",
-    3: "wastafel",
-    4: "hand_sanitizer",
-    5: "pintu_masuk",
 }
 
 # Class index
 CLASS_PERSON       = 0
 CLASS_BAKI         = 1
 CLASS_TROLI        = 2
-CLASS_WASTAFEL     = 3
-CLASS_SANITIZER    = 4
-CLASS_PINTU        = 5
 
 # Grup class "instrumen medis"
 INSTRUMENT_CLASSES = {CLASS_BAKI, CLASS_TROLI}
-
-# Grup class "area cuci tangan"
-HANDWASH_CLASSES   = {CLASS_WASTAFEL, CLASS_SANITIZER}
 
 # ─────────────────────────────────────────────
 # Tracking & Compliance

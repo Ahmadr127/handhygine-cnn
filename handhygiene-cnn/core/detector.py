@@ -45,6 +45,11 @@ class Detector:
             res_custom = self.model_custom(frame, conf=self.conf, verbose=False)[0]
             det_custom = sv.Detections.from_ultralytics(res_custom)
             
+            # Mapping class ID: Karena model best.pt di-training dengan 1 class (baki=0),
+            # kita ubah ID-nya menjadi 1 agar sesuai dengan config dan tidak bentrok dengan person (0).
+            if len(det_custom) > 0:
+                det_custom.class_id = np.full_like(det_custom.class_id, 1)
+            
             # Gabungkan hasil deteksi
             if len(det_person) > 0 and len(det_custom) > 0:
                 detections = sv.Detections.merge([det_person, det_custom])
