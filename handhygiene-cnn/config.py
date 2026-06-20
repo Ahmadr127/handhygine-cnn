@@ -47,7 +47,8 @@ FRAME_QUEUE_SIZE    = 5        # max frame antrian per kamera
 # ─────────────────────────────────────────────
 # Snapshot
 # ─────────────────────────────────────────────
-SNAPSHOT_DIR = os.getenv("SNAPSHOT_DIR", "../snapshots")
+# Simpan langsung ke folder public storage Laravel agar bisa diakses lewat web
+SNAPSHOT_DIR = os.getenv("SNAPSHOT_DIR", "../laravel-app/storage/app/public/snapshots")
 
 # ─────────────────────────────────────────────
 # FastAPI

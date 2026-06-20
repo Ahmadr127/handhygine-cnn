@@ -153,11 +153,13 @@ class GroupComplianceEngine:
             entry_frame = frame if frame is not None else ps.last_frame
             self._fire_event(status, entry_frame, camera_id, person_id, ps)
 
-            # Reset state setelah dievaluasi
+            # Setelah evaluasi: reset HANYA instrumen agar siklus baru bisa dimulai nanti.
+            # wash_time dan carrying_time TIDAK direset agar jika zona pintu ter-trigger lagi
+            # dalam window yang sama (misal orang masih berdiri di pintu), hasilnya tetap konsisten.
+            # Kedua field akan expire sendiri setelah window_seconds (3 menit).
             ps.state                = GroupState.IDLE
             ps.instrumen_terdeteksi = False
-            ps.carrying_time        = 0.0
-            ps.wash_time            = 0.0
+            # carrying_time dan wash_time dibiarkan → evaluasi ulang dalam window tetap akurat
 
             self._cleanup_expired()
 
@@ -181,12 +183,12 @@ class GroupComplianceEngine:
     def get_person_status(self, person_id: str) -> str | None:
         """
         Kembalikan status final orang ini (patuh/tidak_patuh) untuk label di video.
-        Status kadaluarsa setelah 5 detik.
+        Status kadaluarsa setelah 30 detik (cukup lama untuk melewati zona pintu).
         """
         with self.lock:
             if person_id in self.person_status:
                 status, ts = self.person_status[person_id]
-                if time.time() - ts < 5.0:
+                if time.time() - ts < 30.0:
                     return status
                 else:
                     del self.person_status[person_id]

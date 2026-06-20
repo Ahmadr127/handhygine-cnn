@@ -75,6 +75,10 @@ class CameraProcessor:
         self.label_annotator = sv.LabelAnnotator(text_scale=0.5)
         
         self.handwash_dwell_timers: dict[int, float] = {}
+        # Cooldown per-orang untuk zona pintu:
+        # Setelah dievaluasi, abaikan trigger dari zona pintu selama 20 detik
+        # agar reset state tidak langsung memicu siklus TIDAK PATUH baru
+        self.door_eval_cooldown: dict[int, float] = {}
         self._thread: threading.Thread | None = None
 
     # ─── Start / Stop ────────────────────────────────────────────────────────
@@ -243,7 +247,10 @@ class CameraProcessor:
                         del self.handwash_dwell_timers[tid]
 
             if in_door:
-                self.group_engine.report_door_entry(self.camera_id, str(tid), frame)
+                last_door_eval = self.door_eval_cooldown.get(tid, 0)
+                if time.time() - last_door_eval >= 20.0:
+                    self.group_engine.report_door_entry(self.camera_id, str(tid), frame)
+                    self.door_eval_cooldown[tid] = time.time()
 
             # Cek status akhir dari compliance engine (Patuh/Tidak Patuh)
             final_status = self.group_engine.get_person_status(str(tid))

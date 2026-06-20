@@ -25,6 +25,14 @@ def save_snapshot(frame, person_id: str, status: str, camera_name: str = "") -> 
 
     cv2.imwrite(filepath, frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
 
-    # Return path relatif dari root proyek
-    rel_path = os.path.relpath(filepath, start=os.path.join(os.path.dirname(__file__), "../../"))
-    return rel_path.replace("\\", "/")
+    # Ambil bagian path setelah 'public/' agar path yang tersimpan di DB 
+    # langsung berawalan 'snapshots/...' sesuai ekspektasi Laravel
+    # filepath contoh: .../laravel-app/storage/app/public/snapshots/2026-06-20/file.jpg
+    path_str = filepath.replace("\\", "/")
+    if "public/" in path_str:
+        rel_path = path_str.split("public/")[-1]
+    else:
+        # Fallback jika ada yang salah path
+        rel_path = os.path.relpath(filepath, start=os.path.join(os.path.dirname(__file__), "../../")).replace("\\", "/")
+        
+    return rel_path
