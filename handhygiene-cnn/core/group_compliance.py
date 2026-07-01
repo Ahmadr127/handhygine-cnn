@@ -5,7 +5,7 @@ Perubahan v2:
 - Tracking per-person menggunakan person_states dict (fix race condition multi-orang)
 - report_hand_wash menerima person_id (fix Bug #1)
 - Cuci tangan disimpan meskipun state IDLE / CARRYING (fix Bug #3 - pre-emptive wash window)
-- report_door_entry menerima person_id dan evaluasi per-orang (fix Bug #2 & #4)
+- Evaluasi kepatuhan sekarang berdasarkan cuci tangan dan instrumen, bukan lagi zona pintu
 - Auto-cleanup entry yang sudah expire
 """
 import time
@@ -20,7 +20,7 @@ class GroupState(str, Enum):
 
 class PersonState:
     """Menyimpan state satu orang dalam satu siklus kepatuhan."""
-    __slots__ = ("state", "carrying_time", "wash_time", "confidence", "last_frame", "last_camera_id", "instrumen_terdeteksi")
+    __slots__ = ("state", "carrying_time", "wash_time", "confidence", "last_frame", "last_camera_id", "instrumen_terdeteksi", "finalized")
 
     def __init__(self):
         self.state: GroupState        = GroupState.IDLE
@@ -30,6 +30,7 @@ class PersonState:
         self.last_frame               = None
         self.last_camera_id: int      = -1
         self.instrumen_terdeteksi: bool = False   # True jika report_instrument pernah dipanggil
+        self.finalized: bool = False
 
 
 class GroupComplianceEngine:
@@ -63,22 +64,48 @@ class GroupComplianceEngine:
         return self._person_states[person_id]
 
     def _cleanup_expired(self):
-        """Hapus entry person yang sudah lama expire (> 2x window)."""
+        """Hapus entry person yang sudah lama expire atau finalize non-compliance pada timeout."""
         now = time.time()
-        expired = [
-            pid for pid, ps in self._person_states.items()
-            if ps.state == GroupState.IDLE and (now - ps.carrying_time) > self.window_seconds * 2
-            and (now - ps.wash_time) > self.window_seconds * 2
-        ]
+        expired = []
+        for pid, ps in list(self._person_states.items()):
+            if ps.finalized:
+                first_event = min(
+                    ps.carrying_time if ps.carrying_time > 0 else now,
+                    ps.wash_time if ps.wash_time > 0 else now,
+                )
+                if now - first_event > self.window_seconds * 2:
+                    expired.append(pid)
+                continue
+
+            first_event = min(
+                ps.carrying_time if ps.carrying_time > 0 else float('inf'),
+                ps.wash_time     if ps.wash_time > 0     else float('inf'),
+            )
+            if first_event == float('inf'):
+                continue
+
+            if ps.instrumen_terdeteksi and ps.wash_time == 0 and (now - first_event) > self.window_seconds:
+                self._finalize_status("tidak_patuh", ps.last_frame, ps.last_camera_id, pid, ps)
+                expired.append(pid)
+                continue
+
+            if ps.state == GroupState.IDLE and (now - first_event) > self.window_seconds * 2:
+                expired.append(pid)
+
         for pid in expired:
             del self._person_states[pid]
+
+    def cleanup_expired(self):
+        """Public cleanup hook untuk flush person state yang sudah kadaluarsa."""
+        with self.lock:
+            self._cleanup_expired()
 
     # ─── Public API ──────────────────────────────────────────────────────────
 
     def report_instrument(self, camera_id: int, person_id: str, confidence: float, frame):
         """
         Dipanggil saat seseorang terdeteksi membawa instrumen medis.
-        Selalu update carrying_time dan set state CARRYING.
+        Set state CARRYING dan evaluasi ulang jika cuci tangan sudah terekam.
         """
         with self.lock:
             ps = self._get_person(person_id)
@@ -89,81 +116,69 @@ class GroupComplianceEngine:
             ps.last_camera_id        = camera_id
             ps.instrumen_terdeteksi  = True   # tandai bahwa instrumen benar-benar terdeteksi
 
+            if ps.finalized:
+                return
+
+            if ps.wash_time > 0 and (time.time() - ps.wash_time) <= self.window_seconds:
+                self._finalize_status("patuh", frame if frame is not None else ps.last_frame, camera_id, person_id, ps)
+
     def report_hand_wash(self, camera_id: int, person_id: str, frame=None):
         """
         Dipanggil saat seseorang terdeteksi di zona cuci tangan (setelah dwell time).
-        Simpan wash_time dan naikkan state. Bisa dipanggil sebelum atau sesudah instrumen.
+        Simpan wash_time dan finalisasi status PATUH jika belum selesai.
         """
         with self.lock:
             ps = self._get_person(person_id)
-            ps.wash_time = time.time()
+            now = time.time()
+            ps.wash_time = now
 
             # Simpan frame sebagai fallback snapshot
             if frame is not None and ps.last_frame is None:
                 ps.last_frame = frame
 
-            # Update state: HAND_WASHED dari state apapun
+            if ps.finalized:
+                return
+
             if ps.state in (GroupState.IDLE, GroupState.CARRYING):
                 ps.state = GroupState.HAND_WASHED
 
+            if ps.instrumen_terdeteksi:
+                if (now - ps.carrying_time) > self.window_seconds:
+                    # Instrumen sudah kadaluarsa sebelum cuci tangan → langsung TIDAK PATUH
+                    self._finalize_status("tidak_patuh", frame if frame is not None else ps.last_frame, camera_id, person_id, ps)
+                    return
+
+            # Jika cuci tangan sudah terjadi, langsung laporkan PATUH
+            self._finalize_status("patuh", frame if frame is not None else ps.last_frame, camera_id, person_id, ps)
+
     def report_door_entry(self, camera_id: int, person_id: str, frame):
         """
-        Dipanggil saat seseorang terdeteksi di zona pintu.
-
-        Logika kepatuhan:
-          - Instrumen WAJIB terdeteksi (syarat perawat) dalam window
-          - Cuci tangan WAJIB ada dalam window (urutan bebas vs instrumen)
-          - Jika keduanya ada → PATUH
-          - Jika instrumen ada tapi tidak cuci tangan → TIDAK PATUH
-          - Jika instrumen tidak ada → abaikan (bukan perawat)
+        Deprecated: evaluasi kepatuhan tidak lagi bergantung pada zona pintu.
+        Jika metode ini terpaksa dipanggil, hanya flush state kadaluarsa.
         """
         with self.lock:
-            now = time.time()
-
-            if person_id not in self._person_states:
-                return
-
-            ps = self._person_states[person_id]
-
-            # SYARAT UTAMA: instrumen harus terdeteksi (pembeda perawat vs bukan perawat)
-            if not ps.instrumen_terdeteksi:
-                return
-
-            # Hitung window dari event pertama (instrumen atau cuci tangan, mana lebih awal)
-            first_event = min(
-                ps.carrying_time if ps.carrying_time > 0 else float('inf'),
-                ps.wash_time     if ps.wash_time > 0     else float('inf'),
-            )
-            if first_event == float('inf') or (now - first_event) > self.window_seconds:
-                # Session expire → reset
-                ps.state              = GroupState.IDLE
-                ps.instrumen_terdeteksi = False
-                ps.carrying_time      = 0.0
-                ps.wash_time          = 0.0
-                return
-
-            # Cek apakah cuci tangan dilakukan dalam window
-            wash_is_recent = (
-                ps.wash_time > 0
-                and (now - ps.wash_time) <= self.window_seconds
-            )
-
-            status = "patuh" if wash_is_recent else "tidak_patuh"
-
-            entry_frame = frame if frame is not None else ps.last_frame
-            self._fire_event(status, entry_frame, camera_id, person_id, ps)
-
-            # Setelah evaluasi: reset HANYA instrumen agar siklus baru bisa dimulai nanti.
-            # wash_time dan carrying_time TIDAK direset agar jika zona pintu ter-trigger lagi
-            # dalam window yang sama (misal orang masih berdiri di pintu), hasilnya tetap konsisten.
-            # Kedua field akan expire sendiri setelah window_seconds (3 menit).
-            ps.state                = GroupState.IDLE
-            ps.instrumen_terdeteksi = False
-            # carrying_time dan wash_time dibiarkan → evaluasi ulang dalam window tetap akurat
-
             self._cleanup_expired()
 
     # ─── Internal ────────────────────────────────────────────────────────────
+
+    def _finalize_status(self, status: str, frame, trigger_camera_id: int, person_id: str, ps: PersonState):
+        """Selesaikan siklus compliance dan panggil event callback."""
+        if ps.finalized:
+            return
+
+        ps.finalized = True
+        self.person_status[person_id] = (status, time.time())
+
+        if self.on_event:
+            self.on_event({
+                "group_id":              self.group_id,
+                "person_id":             person_id,
+                "camera_id":             trigger_camera_id,
+                "status":                status,
+                "membawa_instrumen":     ps.instrumen_terdeteksi,
+                "aktivitas_cuci_tangan": (status == "patuh"),
+                "confidence":            ps.confidence,
+            }, frame)
 
     def _fire_event(self, status: str, frame, trigger_camera_id: int, person_id: str, ps: PersonState):
         """Simpan status akhir dan panggil callback on_event."""

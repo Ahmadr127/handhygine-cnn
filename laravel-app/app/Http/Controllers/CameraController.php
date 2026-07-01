@@ -91,7 +91,7 @@ class CameraController extends Controller
     {
         $validated = $request->validate([
             'nama_zona'      => 'required|string|max:50',
-            'tipe_zona'      => 'required|in:sanitizer,wastafel,pintu',
+            'tipe_zona'      => 'required|in:sanitizer,wastafel',
             'polygon_points' => 'required|array|min:3',
         ]);
 

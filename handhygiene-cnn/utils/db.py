@@ -53,12 +53,7 @@ def init_tables():
         group_id INTEGER REFERENCES monitoring_groups(id) ON DELETE CASCADE,
         camera_id INTEGER REFERENCES cameras(id) ON DELETE CASCADE,
         nama_zona VARCHAR(50) NOT NULL,
-        tipe_zona VARCHAR(20) NOT NULL CHECK (tipe_zona IN ('sanitizer','wastafel','pintu')),
-        polygon_points JSONB NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-    );
-
-    CREATE TABLE IF NOT EXISTS monitoring_logs (
+            tipe_zona VARCHAR(20) NOT NULL CHECK (tipe_zona IN ('sanitizer','wastafel')),
         id SERIAL PRIMARY KEY,
         person_id VARCHAR(50) NOT NULL,
         group_id INTEGER REFERENCES monitoring_groups(id) ON DELETE CASCADE,

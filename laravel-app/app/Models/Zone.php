@@ -34,7 +34,6 @@ class Zone extends Model
         return match($this->tipe_zona) {
             'sanitizer' => '#00e676',
             'wastafel'  => '#ffeb3b',
-            'pintu'     => '#ef5350',
             default     => '#9e9e9e',
         };
     }

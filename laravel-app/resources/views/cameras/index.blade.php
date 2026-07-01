@@ -87,7 +87,6 @@
     .tipe-btn.selected { transform: scale(1.02); }
     .tipe-btn.sanitizer { background: rgba(0,230,118,0.15); color: #00e676; border-color: #00e676; }
     .tipe-btn.wastafel  { background: rgba(255,235,59,0.15); color: #ffd32a; border-color: #ffd32a; }
-    .tipe-btn.pintu     { background: rgba(255,71,87,0.15); color: #ff4757; border-color: #ff4757; }
 
     .usb-scan-result { margin-top: 8px; }
     .usb-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--bg-primary); border-radius: var(--radius-sm); margin-bottom: 4px; font-size: 13px; }

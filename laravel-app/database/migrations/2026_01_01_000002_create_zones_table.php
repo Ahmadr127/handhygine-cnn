@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('group_id')->constrained('monitoring_groups')->onDelete('cascade');
             $table->foreignId('camera_id')->nullable()->constrained('cameras')->onDelete('cascade');
             $table->string('nama_zona', 50);
-            $table->enum('tipe_zona', ['sanitizer', 'wastafel', 'pintu']);
+            $table->enum('tipe_zona', ['sanitizer', 'wastafel']);
             $table->json('polygon_points');
             $table->timestamps();
         });

@@ -38,7 +38,6 @@
     }
     .tipe-btn.sanitizer { color: #00e676; border-color: #00e676; }
     .tipe-btn.wastafel  { color: #ffd32a; border-color: #ffd32a; }
-    .tipe-btn.pintu     { color: #ff4757; border-color: #ff4757; }
     .tipe-btn.active { opacity: 1; }
     .tipe-btn:not(.active) { opacity: 0.5; }
 
@@ -74,7 +73,6 @@
     }
     .zone-panel-info .zone-type.sanitizer { background: rgba(0,230,118,0.15); color: #00e676; }
     .zone-panel-info .zone-type.wastafel  { background: rgba(255,211,42,0.15); color: #ffd32a; }
-    .zone-panel-info .zone-type.pintu     { background: rgba(255,71,87,0.15); color: #ff4757; }
 
     .zone-panel-info .zone-points { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
@@ -115,8 +113,6 @@
                     onclick="setTipe('sanitizer')">🟢 Sanitizer</button>
             <button class="tipe-btn wastafel" id="btn-wastafel"
                     onclick="setTipe('wastafel')">🟡 Wastafel</button>
-            <button class="tipe-btn pintu" id="btn-pintu"
-                    onclick="setTipe('pintu')">🔴 Pintu</button>
             <div style="flex:1"></div>
             <button class="btn btn-ghost btn-sm" onclick="undoPoint()">↩ Undo</button>
             <button class="btn btn-ghost btn-sm" onclick="clearCanvas()">🗑 Clear</button>
@@ -174,10 +170,9 @@
                     <div class="zone-legend" style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;">
                         <span>🟢 Sanitizer</span>
                         <span>🟡 Wastafel</span>
-                        <span>🔴 Pintu</span>
                     </div>
                     <p style="font-size:11px;color:var(--text-muted);margin-top:8px;">
-                        Minimal 1 zona pintu + 1 zona cuci tangan diperlukan agar sistem bekerja.
+                        Minimal 1 zona cuci tangan (sanitizer/wastafel) diperlukan agar sistem bekerja.
                     </p>
                 </div>
                 @endif
@@ -209,12 +204,11 @@
     const COLORS = {
         sanitizer: '#00e676',
         wastafel:  '#ffd32a',
-        pintu:     '#ff4757',
     };
 
     function setTipe(tipe) {
         currentTipe = tipe;
-        ['sanitizer','wastafel','pintu'].forEach(t => {
+        ['sanitizer','wastafel'].forEach(t => {
             document.getElementById(`btn-${t}`).classList.toggle('active', t === tipe);
         });
     }

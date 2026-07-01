@@ -15,7 +15,7 @@ class ZoneManager:
     Zone types:
         'sanitizer' — area hand sanitizer
         'wastafel'  — area wastafel/sink
-        'pintu'     — area pintu masuk
+        'pintu'     — area pintu masuk (deprecated, hanya masih ditampilkan jika tersimpan di DB)
     """
 
     def __init__(self, camera_id: int):

@@ -48,7 +48,7 @@ STATE_LABELS_ID = {
 }
 
 STATE_COLORS["hand_wash_pending"] = (200, 200, 0)    # kuning redup (sedang dwell)
-STATE_COLORS["hand_washed_done"] = (0, 200, 150)    # hijau-tosca (sudah cuci, belum pintu)
+STATE_COLORS["hand_washed_done"] = (0, 200, 150)    # hijau-tosca (sudah cuci)
 
 
 class CameraProcessor:
@@ -75,10 +75,6 @@ class CameraProcessor:
         self.label_annotator = sv.LabelAnnotator(text_scale=0.5)
         
         self.handwash_dwell_timers: dict[int, float] = {}
-        # Cooldown per-orang untuk zona pintu:
-        # Setelah dievaluasi, abaikan trigger dari zona pintu selama 20 detik
-        # agar reset state tidak langsung memicu siklus TIDAK PATUH baru
-        self.door_eval_cooldown: dict[int, float] = {}
         self._thread: threading.Thread | None = None
 
     # ─── Start / Stop ────────────────────────────────────────────────────────
@@ -216,9 +212,6 @@ class CameraProcessor:
                 bbox[2] * scale_x_ref, bbox[3] * scale_y_ref,
             )
             in_handwash = self.zone_mgr.bbox_intersects_handwash_zone(x1s, y1s, x2s, y2s)
-            # Zona pintu: tetap pakai titik kaki (lebih akurat untuk deteksi masuk pintu)
-            in_door = self.zone_mgr.is_in_door_zone(bx_scaled, by_scaled)
-
             state = "monitoring"
 
             if near_instrument:
@@ -246,12 +239,6 @@ class CameraProcessor:
                     if gap > 5.0:  # grace period: boleh keluar zona max 5 detik
                         del self.handwash_dwell_timers[tid]
 
-            if in_door:
-                last_door_eval = self.door_eval_cooldown.get(tid, 0)
-                if time.time() - last_door_eval >= 20.0:
-                    self.group_engine.report_door_entry(self.camera_id, str(tid), frame)
-                    self.door_eval_cooldown[tid] = time.time()
-
             # Cek status akhir dari compliance engine (Patuh/Tidak Patuh)
             final_status = self.group_engine.get_person_status(str(tid))
             if final_status:
@@ -260,7 +247,7 @@ class CameraProcessor:
                 # Tampilkan state engine internal untuk monitoring
                 engine_state = self.group_engine.get_engine_state(str(tid))
                 if engine_state == "hand_washed":
-                    state = "hand_washed_done"    # Sudah cuci tangan, menuju pintu
+                    state = "hand_washed_done"    # Sudah cuci tangan
                 elif engine_state == "carrying":
                     state = "carrying_instrument"  # Engine confirm membawa instrumen
 
@@ -282,6 +269,9 @@ class CameraProcessor:
 
         # Draw zones
         self._draw_zones(annotated)
+
+        # Bersihkan state yang sudah kadaluarsa setiap frame.
+        self.group_engine.cleanup_expired()
 
         return annotated
 

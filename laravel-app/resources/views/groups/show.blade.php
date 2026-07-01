@@ -77,28 +77,22 @@
         <div class="card-body">
             @php
                 $hasSanitizer = false;
-                $hasPintu = false;
                 $totalZones = 0;
                 foreach($group->cameras as $c) {
                     foreach($c->zones as $z) {
                         $totalZones++;
                         if (in_array($z->tipe_zona, ['sanitizer', 'wastafel'])) $hasSanitizer = true;
-                        if ($z->tipe_zona === 'pintu') $hasPintu = true;
                     }
                 }
             @endphp
 
             <div style="margin-bottom:20px;">
-                <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Syarat monitoring: 1 Zona Cuci Tangan + 1 Zona Pintu di seluruh kamera dalam grup.</p>
+                <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Syarat monitoring: 1 Zona Cuci Tangan (sanitizer/wastafel) di seluruh kamera dalam grup.</p>
                 
                 <div style="display:flex; flex-direction:column; gap:8px;">
                     <div style="padding:10px 14px; border-radius:var(--radius-sm); border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:{{ $hasSanitizer ? 'var(--green-dim)' : 'var(--red-dim)' }}">
                         <span style="font-size:13px; font-weight:600; color:{{ $hasSanitizer ? 'var(--green)' : 'var(--red)' }}">🟢 Zona Cuci Tangan / Sanitizer</span>
                         <span>{{ $hasSanitizer ? '✅ ADA' : '❌ BELUM ADA' }}</span>
-                    </div>
-                    <div style="padding:10px 14px; border-radius:var(--radius-sm); border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:{{ $hasPintu ? 'var(--green-dim)' : 'var(--red-dim)' }}">
-                        <span style="font-size:13px; font-weight:600; color:{{ $hasPintu ? 'var(--green)' : 'var(--red)' }}">🔴 Zona Pintu Masuk</span>
-                        <span>{{ $hasPintu ? '✅ ADA' : '❌ BELUM ADA' }}</span>
                     </div>
                 </div>
             </div>
@@ -109,7 +103,7 @@
                     @foreach($c->zones as $z)
                     <div style="display:flex; justify-content:space-between; font-size:12px; padding:8px 0; border-bottom:1px solid var(--border);">
                         <span>{{ $z->nama_zona }} <span style="opacity:0.5;">(di {{ $c->nama_kamera }})</span></span>
-                        <span style="font-weight:600; color:{{ $z->tipe_zona === 'pintu' ? 'var(--red)' : 'var(--green)' }}">{{ strtoupper($z->tipe_zona) }}</span>
+                        <span style="font-weight:600; color: var(--green)">{{ strtoupper($z->tipe_zona) }}</span>
                     </div>
                     @endforeach
                 @endforeach

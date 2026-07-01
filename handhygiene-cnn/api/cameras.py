@@ -22,7 +22,7 @@ class CameraCreate(BaseModel):
 class ZoneCreate(BaseModel):
     group_id: int
     nama_zona: str
-    tipe_zona: str   # 'sanitizer' | 'wastafel' | 'pintu'
+    tipe_zona: str   # 'sanitizer' | 'wastafel'
     polygon_points: list[dict]  # [{"x": int, "y": int}, ...]
 
 
@@ -89,8 +89,8 @@ def get_zones(camera_id: int):
 @router.post("/{camera_id}/zones")
 def add_zone(camera_id: int, data: ZoneCreate):
     """Tambah zona baru untuk kamera."""
-    if data.tipe_zona not in ("sanitizer", "wastafel", "pintu"):
-        raise HTTPException(400, "tipe_zona harus 'sanitizer', 'wastafel', atau 'pintu'")
+    if data.tipe_zona not in ("sanitizer", "wastafel"):
+        raise HTTPException(400, "tipe_zona harus 'sanitizer' atau 'wastafel'")
 
     # Tidak perlu insert DB di sini karena Laravel sudah menyimpannya.
     # Kita hanya perlu reload zone di processor yang sedang berjalan.
