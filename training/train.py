@@ -1,10 +1,3 @@
-"""
-training/train.py
-==================
-Fine-tune YOLOv8n untuk sistem monitoring kepatuhan cuci tangan.
-
-Jalankan: python training/train.py [--epochs EPOCHS] [--batch BATCH]
-"""
 import os
 import sys
 import argparse

@@ -1,17 +1,25 @@
 @extends('layouts.app')
 
 @section('title', 'Detail Grup: ' . $group->nama_grup)
-@section('page-title', '🏢 Detail Grup: ' . $group->nama_grup)
+@section('page-title', 'Detail Grup: ' . $group->nama_grup)
 
 @section('content')
 <div style="margin-bottom:16px;">
-    <a href="{{ route('groups.index') }}" class="btn btn-ghost btn-sm">← Kembali ke Daftar Grup</a>
+    <a href="{{ route('groups.index') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:4px;">
+        <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i> Kembali ke Daftar Grup
+    </a>
 </div>
 
 <div class="card mb-6">
     <div class="card-body">
-        <h2 style="margin-bottom:8px;">{{ $group->nama_grup }}</h2>
-        @if($group->lokasi) <p style="color:var(--text-secondary);font-size:14px;margin-bottom:4px;">📍 Lokasi: {{ $group->lokasi }}</p> @endif
+        <h2 style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+            <i data-lucide="network" style="width: 24px; height: 24px; color: var(--accent);"></i> {{ $group->nama_grup }}
+        </h2>
+        @if($group->lokasi) 
+            <p style="color:var(--text-secondary);font-size:14px;margin-bottom:4px;display:flex;align-items:center;gap:4px;">
+                <i data-lucide="map-pin" style="width:14px;height:14px;color:var(--text-muted);"></i> Lokasi: {{ $group->lokasi }}
+            </p> 
+        @endif
         @if($group->deskripsi) <p style="color:var(--text-muted);font-size:14px;">{{ $group->deskripsi }}</p> @endif
     </div>
 </div>
@@ -21,7 +29,9 @@
     <!-- ── Kamera Terhubung ──────────────────────────────────────── -->
     <div class="card">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-            <span class="card-title">📷 Kamera dalam Grup</span>
+            <span class="card-title" style="display:flex;align-items:center;gap:6px;">
+                <i data-lucide="video" style="width: 16px; height: 16px; color: var(--text-muted);"></i> Kamera dalam Grup
+            </span>
             <span class="badge badge-monitoring">{{ $group->cameras->count() }} / 4 Kamera</span>
         </div>
         <div class="card-body">
@@ -33,11 +43,15 @@
                 @foreach($group->cameras as $cam)
                 <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--bg-primary); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:8px;">
                     <div>
-                        <div style="font-weight:600; font-size:14px;">{{ $cam->tipe_icon }} {{ $cam->nama_kamera }}</div>
+                        <div style="font-weight:600; font-size:14px; display:flex; align-items:center; gap:6px;">
+                            <i data-lucide="video" style="width:14px;height:14px;color:var(--text-secondary);"></i> {{ $cam->nama_kamera }}
+                        </div>
                         <div style="font-size:12px; color:var(--text-muted); font-family:monospace; margin-top:4px;">{{ $cam->source }}</div>
                     </div>
                     <div style="display:flex; gap:8px;">
-                        <a href="{{ route('cameras.zones', $cam) }}" class="btn btn-ghost btn-sm">🗺 Set Zona</a>
+                        <a href="{{ route('cameras.zones', $cam) }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:4px;">
+                            <i data-lucide="map" style="width: 12px; height: 12px;"></i> Set Zona
+                        </a>
                         <form action="{{ route('groups.remove', [$group, $cam]) }}" method="POST">
                             @csrf @method('DELETE')
                             <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Keluarkan kamera ini dari grup?')">Keluarkan</button>
@@ -57,8 +71,8 @@
                             <option value="{{ $avail->id }}">{{ $avail->nama_kamera }}</option>
                         @endforeach
                     </select>
-                    <button type="submit" class="btn btn-primary" {{ $available_cameras->isEmpty() ? 'disabled' : '' }}>
-                        ➕ Tambah
+                    <button type="submit" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:4px;" {{ $available_cameras->isEmpty() ? 'disabled' : '' }}>
+                        <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Tambah
                     </button>
                 </form>
                 @if($available_cameras->isEmpty())
@@ -72,7 +86,9 @@
     <!-- ── Konfigurasi Zona Keseluruhan ─────────────────────────── -->
     <div class="card">
         <div class="card-header">
-            <span class="card-title">🗺 Status Zona Grup</span>
+            <span class="card-title" style="display:flex;align-items:center;gap:6px;">
+                <i data-lucide="map" style="width: 16px; height: 16px; color: var(--text-muted);"></i> Status Zona Grup
+            </span>
         </div>
         <div class="card-body">
             @php
@@ -87,18 +103,27 @@
             @endphp
 
             <div style="margin-bottom:20px;">
-                <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Syarat monitoring: 1 Zona Cuci Tangan (sanitizer/wastafel) di seluruh kamera dalam grup.</p>
+                <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Syarat monitoring: minimal 1 Zona Cuci Tangan (sanitizer/wastafel) di seluruh kamera dalam grup.</p>
                 
                 <div style="display:flex; flex-direction:column; gap:8px;">
                     <div style="padding:10px 14px; border-radius:var(--radius-sm); border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:{{ $hasSanitizer ? 'var(--green-dim)' : 'var(--red-dim)' }}">
-                        <span style="font-size:13px; font-weight:600; color:{{ $hasSanitizer ? 'var(--green)' : 'var(--red)' }}">🟢 Zona Cuci Tangan / Sanitizer</span>
-                        <span>{{ $hasSanitizer ? '✅ ADA' : '❌ BELUM ADA' }}</span>
+                        <span style="font-size:13px; font-weight:600; color:{{ $hasSanitizer ? 'var(--green)' : 'var(--red)' }}; display:inline-flex; align-items:center; gap:6px;">
+                            @if($hasSanitizer)
+                                <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+                            @else
+                                <i data-lucide="x-circle" style="width: 16px; height: 16px;"></i>
+                            @endif
+                            Zona Cuci Tangan / Sanitizer
+                        </span>
+                        <span style="font-weight:700; color:{{ $hasSanitizer ? 'var(--green)' : 'var(--red)' }};">{{ $hasSanitizer ? 'ADA' : 'BELUM ADA' }}</span>
                     </div>
                 </div>
             </div>
 
             @if($totalZones > 0)
-                <h4 style="font-size:13px; margin-bottom:12px;">Daftar Zona:</h4>
+                <h4 style="font-size:13px; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+                    <i data-lucide="list" style="width: 14px; height: 14px; color: var(--text-muted);"></i> Daftar Zona:
+                </h4>
                 @foreach($group->cameras as $c)
                     @foreach($c->zones as $z)
                     <div style="display:flex; justify-content:space-between; font-size:12px; padding:8px 0; border-bottom:1px solid var(--border);">

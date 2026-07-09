@@ -14,34 +14,44 @@
     <style>
         /* ─── CSS Variables ─────────────────────────────────────────── */
         :root {
-            --bg-primary:    #0a0e1a;
-            --bg-secondary:  #111827;
-            --bg-card:       #1a2236;
-            --bg-card-hover: #1e2a40;
-            --border:        #2d3748;
-            --border-light:  #374151;
+            /* Area Konten (Tema Terang Kontras Tinggi) */
+            --bg-primary:    #f1f5f9;  /* Abu-abu Slate 100 untuk background utama */
+            --bg-secondary:  #ffffff;  /* Putih bersih untuk topbar */
+            --bg-card:       #ffffff;  /* Putih bersih untuk card */
+            --bg-card-hover: #f8fafc;  /* Hover card */
+            --border:        #cbd5e1;  /* Abu-abu Slate 300 untuk border yang tegas */
+            --border-light:  #e2e8f0;  /* Abu-abu Slate 200 */
 
-            --accent:        #00d4ff;
-            --accent-dim:    rgba(0, 212, 255, 0.15);
-            --accent-glow:   0 0 20px rgba(0, 212, 255, 0.3);
+            /* Area Sidebar (Tema Gelap Premium) */
+            --sidebar-bg:             #0f172a;  /* Slate 900 */
+            --sidebar-border:         #1e293b;  /* Slate 800 */
+            --sidebar-text-primary:   #f8fafc;  /* Slate 50 */
+            --sidebar-text-secondary: #94a3b8;  /* Slate 400 */
+            --sidebar-text-muted:     #64748b;  /* Slate 500 */
+            --sidebar-nav-hover:      #1e293b;  /* Slate 800 */
 
-            --green:         #00e676;
-            --green-dim:     rgba(0, 230, 118, 0.15);
-            --red:           #ff4757;
-            --red-dim:       rgba(255, 71, 87, 0.15);
-            --orange:        #ffa502;
-            --orange-dim:    rgba(255, 165, 2, 0.15);
-            --yellow:        #ffd32a;
+            /* Warna Aksen & Status */
+            --accent:        #2563eb;  /* Biru Royal */
+            --accent-dim:    rgba(37, 99, 235, 0.08);
+            --accent-glow:   0 4px 14px rgba(37, 99, 235, 0.15);
 
-            --text-primary:   #f1f5f9;
-            --text-secondary: #94a3b8;
-            --text-muted:     #64748b;
+            --green:         #16a34a;  /* Hijau sukses kontras tinggi */
+            --green-dim:     rgba(22, 163, 74, 0.08);
+            --red:           #dc2626;  /* Merah bahaya kontras tinggi */
+            --red-dim:       rgba(220, 38, 38, 0.08);
+            --orange:        #d97706;  /* Jingga peringatan kontras tinggi */
+            --orange-dim:    rgba(217, 119, 6, 0.08);
+            --yellow:        #eab308;
+
+            --text-primary:   #0f172a;  /* Slate 900 - hitam pekat untuk teks */
+            --text-secondary: #334155;  /* Slate 700 */
+            --text-muted:     #64748b;  /* Slate 500 */
 
             --sidebar-w:     240px;
             --topbar-h:      60px;
             --radius:        12px;
             --radius-sm:     8px;
-            --shadow:        0 4px 24px rgba(0, 0, 0, 0.4);
+            --shadow:        0 4px 20px rgba(15, 23, 42, 0.06); /* Shadow halus minimalis */
         }
 
         /* ─── Reset & Base ──────────────────────────────────────────── */
@@ -57,10 +67,10 @@
         }
 
         /* ─── Sidebar ───────────────────────────────────────────────── */
-        .sidebar {
+.sidebar {
             width: var(--sidebar-w);
-            background: var(--bg-secondary);
-            border-right: 1px solid var(--border);
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--sidebar-border);
             display: flex;
             flex-direction: column;
             height: 100vh;
@@ -72,7 +82,7 @@
 
         .sidebar-logo {
             padding: 20px 20px 16px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--sidebar-border);
         }
 
         .sidebar-logo-title {
@@ -80,13 +90,13 @@
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            color: var(--accent);
+            color: #38bdf8; /* Sky Blue - Aksen terang pada background gelap */
             line-height: 1.3;
         }
 
         .sidebar-logo-sub {
             font-size: 11px;
-            color: var(--text-muted);
+            color: var(--sidebar-text-secondary);
             margin-top: 2px;
         }
 
@@ -101,7 +111,7 @@
             font-weight: 600;
             letter-spacing: 0.1em;
             text-transform: uppercase;
-            color: var(--text-muted);
+            color: var(--sidebar-text-muted);
             padding: 8px 12px 4px;
         }
 
@@ -112,7 +122,7 @@
             padding: 10px 12px;
             border-radius: var(--radius-sm);
             text-decoration: none;
-            color: var(--text-secondary);
+            color: var(--sidebar-text-secondary);
             font-size: 14px;
             font-weight: 500;
             transition: all 0.2s ease;
@@ -120,21 +130,32 @@
         }
 
         .nav-item:hover {
-            background: var(--bg-card);
-            color: var(--text-primary);
+            background: var(--sidebar-nav-hover);
+            color: var(--sidebar-text-primary);
         }
 
         .nav-item.active {
-            background: var(--accent-dim);
-            color: var(--accent);
-            border: 1px solid rgba(0, 212, 255, 0.2);
+            background: rgba(59, 130, 246, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.25);
         }
 
-        .nav-item .nav-icon { font-size: 18px; width: 20px; text-align: center; }
+        .nav-item .nav-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+        }
+        .nav-icon svg, .nav-icon-svg {
+            width: 18px;
+            height: 18px;
+            stroke-width: 2.2px;
+        }
 
         .sidebar-footer {
             padding: 12px;
-            border-top: 1px solid var(--border);
+            border-top: 1px solid var(--sidebar-border);
         }
 
         .ai-status {
@@ -142,15 +163,15 @@
             align-items: center;
             gap: 8px;
             padding: 10px 12px;
-            background: var(--bg-card);
+            background: rgba(255, 255, 255, 0.03);
             border-radius: var(--radius-sm);
-            border: 1px solid var(--border);
+            border: 1px solid var(--sidebar-border);
         }
 
         .ai-status-dot {
             width: 8px; height: 8px;
             border-radius: 50%;
-            background: var(--text-muted);
+            background: var(--sidebar-text-muted);
             flex-shrink: 0;
             transition: all 0.3s;
         }
@@ -158,7 +179,7 @@
         .ai-status-dot.online  { background: var(--green); box-shadow: 0 0 8px var(--green); }
         .ai-status-dot.offline { background: var(--red); }
 
-        .ai-status-text { font-size: 12px; color: var(--text-secondary); }
+        .ai-status-text { font-size: 12px; color: var(--sidebar-text-secondary); }
 
         /* ─── Main Content ──────────────────────────────────────────── */
         .main {
@@ -320,11 +341,11 @@
 
         .btn-primary {
             background: var(--accent);
-            color: #0a0e1a;
+            color: #ffffff;
         }
 
         .btn-primary:hover {
-            background: #00b8d9;
+            background: #1d4ed8;
             box-shadow: var(--accent-glow);
         }
 
@@ -440,8 +461,8 @@
         /* ─── Scrollbar ──────────────────────────────────────────────── */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-primary); }
-        ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
         /* ─── Animations ─────────────────────────────────────────────── */
         @keyframes pulse {
@@ -475,33 +496,36 @@
 <body>
     <!-- Sidebar -->
     <nav class="sidebar">
-        <div class="sidebar-logo">
-            <div class="sidebar-logo-title">🏥 Hand Hygiene</div>
-            <div class="sidebar-logo-sub">Monitoring System v1.0</div>
+        <div class="sidebar-logo" style="display: flex; align-items: center; gap: 10px;">
+            <i data-lucide="activity" style="color: #38bdf8; width: 22px; height: 22px; flex-shrink: 0;"></i>
+            <div>
+                <div class="sidebar-logo-title" style="color: #ffffff;">Hand Hygiene</div>
+                <div class="sidebar-logo-sub">Monitor System v1.0</div>
+            </div>
         </div>
 
         <div class="sidebar-nav">
             <div class="nav-section-title">Utama</div>
             <a href="{{ route('dashboard') }}"
                class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                <span class="nav-icon">📊</span> Dashboard
+                <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span> Dashboard
             </a>
             <a href="{{ route('groups.index') }}"
                class="nav-item {{ request()->routeIs('groups.*') ? 'active' : '' }}">
-                <span class="nav-icon">🏢</span> Grup Monitoring
+                <span class="nav-icon"><i data-lucide="layers"></i></span> Grup Monitoring
             </a>
             <a href="{{ route('cameras.index') }}"
                class="nav-item {{ request()->routeIs('cameras.*') ? 'active' : '' }}">
-                <span class="nav-icon">📷</span> Kamera
+                <span class="nav-icon"><i data-lucide="video"></i></span> Kamera
             </a>
             <a href="{{ route('monitoring.index') }}"
                class="nav-item {{ request()->routeIs('monitoring.*') ? 'active' : '' }}">
-                <span class="nav-icon">📋</span> Log Monitoring
+                <span class="nav-icon"><i data-lucide="clipboard-list"></i></span> Log Monitoring
             </a>
 
             <div class="nav-section-title" style="margin-top:8px">Info</div>
             <a href="http://localhost:8001/docs" target="_blank" class="nav-item">
-                <span class="nav-icon">🔌</span> AI Service API
+                <span class="nav-icon"><i data-lucide="cpu"></i></span> AI Service API
             </a>
         </div>
 
@@ -519,7 +543,18 @@
     <div class="main">
         <div class="topbar">
             <div class="topbar-title">@yield('page-title', 'Dashboard')</div>
-            <div class="topbar-time" id="clockDisplay"></div>
+            <div class="flex items-center gap-3">
+                <div class="topbar-time" style="display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="clock" style="width: 14px; height: 14px; color: var(--text-muted);"></i>
+                    <span id="clockDisplay"></span>
+                </div>
+                <form action="{{ route('logout') }}" method="POST" style="display: inline;">
+                    @csrf
+                    <button type="submit" class="btn btn-ghost btn-sm" style="border: 1px solid var(--border); background: var(--bg-secondary); cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 500;">
+                        <i data-lucide="log-out" style="width: 14px; height: 14px;"></i> Logout
+                    </button>
+                </form>
+            </div>
         </div>
 
         <div class="page-content fade-in">
@@ -566,6 +601,12 @@
         }
         checkAiService();
         setInterval(checkAiService, 10000);
+    </script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        lucide.createIcons();
     </script>
 
     @stack('scripts')

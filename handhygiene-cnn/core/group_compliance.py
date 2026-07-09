@@ -47,7 +47,7 @@ class GroupComplianceEngine:
         self.group_id       = group_id
         self.on_event       = on_event
         self.lock           = threading.Lock()
-        self.window_seconds = 180.0  # 3 menit: cukup untuk ambil instrumen → letakkan → cuci tangan → masuk pintu
+        self.window_seconds = 180.0  # 3 menit: cukup untuk ambil instrumen → letakkan → cuci tangan
 
         # State per person_id
         self._person_states: dict[str, PersonState] = {}
@@ -151,14 +151,6 @@ class GroupComplianceEngine:
             # Jika cuci tangan sudah terjadi, langsung laporkan PATUH
             self._finalize_status("patuh", frame if frame is not None else ps.last_frame, camera_id, person_id, ps)
 
-    def report_door_entry(self, camera_id: int, person_id: str, frame):
-        """
-        Deprecated: evaluasi kepatuhan tidak lagi bergantung pada zona pintu.
-        Jika metode ini terpaksa dipanggil, hanya flush state kadaluarsa.
-        """
-        with self.lock:
-            self._cleanup_expired()
-
     # ─── Internal ────────────────────────────────────────────────────────────
 
     def _finalize_status(self, status: str, frame, trigger_camera_id: int, person_id: str, ps: PersonState):
@@ -198,7 +190,7 @@ class GroupComplianceEngine:
     def get_person_status(self, person_id: str) -> str | None:
         """
         Kembalikan status final orang ini (patuh/tidak_patuh) untuk label di video.
-        Status kadaluarsa setelah 30 detik (cukup lama untuk melewati zona pintu).
+        Status kadaluarsa setelah 30 detik (cukup lama untuk visualisasi status).
         """
         with self.lock:
             if person_id in self.person_status:

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Log Monitoring')
-@section('page-title', '📋 Log Monitoring Kepatuhan')
+@section('page-title', 'Log Monitoring Kepatuhan')
 
 @push('styles')
 <style>
@@ -31,11 +31,14 @@
         font-weight: 600;
         border: 1px solid var(--border);
         background: var(--bg-card);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
-    .chip.green { border-color: rgba(0,230,118,0.3); color: var(--green); background: var(--green-dim); }
-    .chip.red   { border-color: rgba(255,71,87,0.3); color: var(--red);   background: var(--red-dim);   }
-    .chip.blue  { border-color: rgba(0,212,255,0.3); color: var(--accent); background: var(--accent-dim); }
-    .chip.orange{ border-color: rgba(255,165,2,0.3); color: var(--orange); background: var(--orange-dim); }
+    .chip.green { border-color: rgba(22,163,74,0.3); color: var(--green); background: var(--green-dim); }
+    .chip.red   { border-color: rgba(220,38,38,0.3); color: var(--red);   background: var(--red-dim);   }
+    .chip.blue  { border-color: rgba(37,99,235,0.3); color: var(--accent); background: var(--accent-dim); }
+    .chip.orange{ border-color: rgba(217,119,6,0.3); color: var(--orange); background: var(--orange-dim); }
 
     .snapshot-thumb {
         width: 48px; height: 36px;
@@ -70,20 +73,22 @@
         transition: all 0.2s;
     }
     .page-link:hover { background: var(--bg-card-hover); color: var(--text-primary); }
-    .page-link.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(0,212,255,0.3); }
+    .page-link.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(37,99,235,0.3); }
 
     /* Lightbox */
     .lightbox {
         display: none; position: fixed; inset: 0;
-        background: rgba(0,0,0,0.9); z-index: 999;
+        background: rgba(0,0,0,0.85); z-index: 999;
         align-items: center; justify-content: center;
+        backdrop-filter: blur(4px);
     }
     .lightbox.open { display: flex; }
-    .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: var(--radius); }
+    .lightbox img { max-width: 85vw; max-height: 85vh; border-radius: var(--radius); box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
     .lightbox-close {
         position: absolute; top: 16px; right: 24px;
-        font-size: 32px; color: #fff; cursor: pointer;
+        font-size: 24px; color: #fff; cursor: pointer;
         background: none; border: none; line-height: 1;
+        display: flex; align-items: center; justify-content: center;
     }
 </style>
 @endpush
@@ -96,8 +101,8 @@
         <label class="form-label">Status</label>
         <select name="status" class="form-control">
             <option value="">Semua Status</option>
-            <option value="patuh"      {{ request('status') === 'patuh' ? 'selected' : '' }}>✅ Patuh</option>
-            <option value="tidak_patuh" {{ request('status') === 'tidak_patuh' ? 'selected' : '' }}>❌ Tidak Patuh</option>
+            <option value="patuh"      {{ request('status') === 'patuh' ? 'selected' : '' }}>Patuh</option>
+            <option value="tidak_patuh" {{ request('status') === 'tidak_patuh' ? 'selected' : '' }}>Tidak Patuh</option>
         </select>
     </div>
     <div class="form-group">
@@ -120,23 +125,41 @@
         <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
     </div>
     <div style="display:flex;gap:8px;">
-        <button type="submit" class="btn btn-primary">🔍 Filter</button>
-        <a href="{{ route('monitoring.index') }}" class="btn btn-ghost">↺ Reset</a>
+        <button type="submit" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:4px;">
+            <i data-lucide="search" style="width: 14px; height: 14px;"></i> Filter
+        </button>
+        <a href="{{ route('monitoring.index') }}" class="btn btn-ghost" style="display:inline-flex;align-items:center;gap:4px;">
+            <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Reset
+        </a>
     </div>
 </form>
 
 <!-- ── Summary Chips ───────────────────────────────────────────────── -->
 <div class="summary-chips">
-    <div class="chip blue">📊 Total: {{ $stats['total'] }}</div>
-    <div class="chip green">✅ Patuh: {{ $stats['patuh'] }}</div>
-    <div class="chip red">❌ Tidak Patuh: {{ $stats['tidak_patuh'] }}</div>
-    <div class="chip orange">📈 Kepatuhan: {{ $stats['persen'] }}%</div>
+    <div class="chip blue">
+        <i data-lucide="bar-chart-2" style="width: 15px; height: 15px;"></i>
+        Total: {{ $stats['total'] }}
+    </div>
+    <div class="chip green">
+        <i data-lucide="check-circle" style="width: 15px; height: 15px;"></i>
+        Patuh: {{ $stats['patuh'] }}
+    </div>
+    <div class="chip red">
+        <i data-lucide="x-circle" style="width: 15px; height: 15px;"></i>
+        Tidak Patuh: {{ $stats['tidak_patuh'] }}
+    </div>
+    <div class="chip orange">
+        <i data-lucide="trending-up" style="width: 15px; height: 15px;"></i>
+        Kepatuhan: {{ $stats['persen'] }}%
+    </div>
 </div>
 
 <!-- ── Tabel Log ───────────────────────────────────────────────────── -->
 <div class="card">
-    <div class="card-header">
-        <span class="card-title">📋 Riwayat Monitoring</span>
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="card-title" style="display:flex;align-items:center;gap:6px;">
+            <i data-lucide="clipboard-list" style="width: 16px; height: 16px; color: var(--text-muted);"></i> Riwayat Monitoring
+        </span>
         <span class="text-muted text-sm">{{ $logs->total() }} total record</span>
     </div>
     <div class="table-wrapper">
@@ -163,9 +186,13 @@
                              onclick="openLightbox('{{ asset('storage/' . $log->snapshot_path) }}')"
                              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
                              alt="Snapshot">
-                        <div class="no-snapshot" style="display:none">📷</div>
+                        <div class="no-snapshot" style="display:none">
+                            <i data-lucide="image" style="width:16px;height:16px;"></i>
+                        </div>
                         @else
-                        <div class="no-snapshot">📷</div>
+                        <div class="no-snapshot">
+                            <i data-lucide="image" style="width:16px;height:16px;"></i>
+                        </div>
                         @endif
                     </td>
                     <td>
@@ -175,19 +202,33 @@
                     </td>
                     <td>{{ $log->camera?->nama_kamera ?? '—' }}</td>
                     <td>
-                        <span class="badge {{ $log->status === 'patuh' ? 'badge-patuh' : 'badge-tidak-patuh' }}">
-                            {{ $log->status === 'patuh' ? '✅ Patuh' : '❌ Tidak Patuh' }}
+                        <span class="badge {{ $log->status === 'patuh' ? 'badge-patuh' : 'badge-tidak-patuh' }}" style="display:inline-flex;align-items:center;gap:4px;">
+                            @if($log->status === 'patuh')
+                                <i data-lucide="check-circle" style="width:12px;height:12px;"></i> Patuh
+                            @else
+                                <i data-lucide="x-circle" style="width:12px;height:12px;"></i> Tidak Patuh
+                            @endif
                         </span>
                     </td>
                     <td>
-                        <span style="color: {{ $log->membawa_instrumen ? 'var(--orange)' : 'var(--text-muted)' }}">
-                            {{ $log->membawa_instrumen ? '🧰 Ya' : '—' }}
-                        </span>
+                        @if($log->membawa_instrumen)
+                            <span style="color: var(--orange); display:inline-flex; align-items:center; gap:4px; font-weight: 500;">
+                                <i data-lucide="package" style="width: 14px; height: 14px;"></i> Ya
+                            </span>
+                        @else
+                            <span style="color: var(--text-muted)">—</span>
+                        @endif
                     </td>
                     <td>
-                        <span style="color: {{ $log->aktivitas_cuci_tangan ? 'var(--green)' : 'var(--red)' }}">
-                            {{ $log->aktivitas_cuci_tangan ? '🚿 Ya' : '✗ Tidak' }}
-                        </span>
+                        @if($log->aktivitas_cuci_tangan)
+                            <span style="color: var(--green); display:inline-flex; align-items:center; gap:4px; font-weight: 500;">
+                                <i data-lucide="droplet" style="width: 14px; height: 14px;"></i> Ya
+                            </span>
+                        @else
+                            <span style="color: var(--red); display:inline-flex; align-items:center; gap:4px; font-weight: 500;">
+                                <i data-lucide="x" style="width: 14px; height: 14px;"></i> Tidak
+                            </span>
+                        @endif
                     </td>
                     <td class="font-mono" style="font-size:12px;">
                         {{ $log->waktu->format('d/m/Y H:i:s') }}
@@ -217,7 +258,9 @@
 
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
-    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <button class="lightbox-close" onclick="closeLightbox()">
+        <i data-lucide="x" style="width:28px;height:28px;"></i>
+    </button>
     <img id="lightboxImg" src="" alt="Snapshot">
 </div>
 @endsection

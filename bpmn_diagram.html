@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Last Updated: 2026-07-09 (Removed pintu/door zone from system logic) -->
+  <title>BPMN Diagram – Sistem Monitoring Kepatuhan Cuci Tangan</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #f0f2f5;
+      font-family: 'Inter', Arial, sans-serif;
+      padding: 32px 20px 60px;
+      color: #222;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+    .page-header p {
+      margin-top: 6px;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .nav-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .tab-btn {
+      padding: 9px 20px;
+      border: 1.5px solid #c8ccd4;
+      background: #fff;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.18s;
+      color: #555;
+    }
+    .tab-btn:hover { background: #eef1fd; border-color: #3b5bdb; color: #3b5bdb; }
+    .tab-btn.active { background: #3b5bdb; border-color: #3b5bdb; color: #fff; box-shadow: 0 4px 12px rgba(59,91,219,.22); }
+
+    /* Default panel styling (visible during render, can be hidden via .hidden class) */
+    .diagram-panel {
+      display: block;
+    }
+    .diagram-panel.hidden {
+      display: none;
+    }
+
+    .diagram-card {
+      background: #fff;
+      border: 1px solid #dde0e7;
+      border-radius: 10px;
+      max-width: 900px;
+      margin: 0 auto 24px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.07);
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f7f8fc;
+      border-bottom: 1px solid #dde0e7;
+      padding: 11px 18px;
+    }
+    .tag {
+      font-size: 11px;
+      font-weight: 700;
+      background: #dde2f0;
+      color: #3b4a6b;
+      padding: 2px 9px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .card-title { font-size: 13px; font-weight: 600; color: #2c3e50; }
+    .card-body {
+      padding: 24px 20px;
+      text-align: center;
+      overflow-x: auto;
+    }
+    .card-caption {
+      margin-top: 16px;
+      font-size: 13px;
+      color: #444;
+      font-weight: 500;
+    }
+    .card-caption strong { color: #1a1a2e; }
+
+    .info-box {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px solid #dde0e7;
+      border-radius: 8px;
+      padding: 20px 22px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.05);
+      font-size: 13px;
+      line-height: 1.85;
+      color: #333;
+    }
+    .info-box h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 10px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid #eee;
+    }
+    .info-box ul { margin-left: 20px; margin-top: 6px; }
+    .info-box li { margin-bottom: 4px; }
+
+    .mermaid { min-height: 60px; }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>BPMN — Business Process Model and Notation</h1>
+  <p>Perbandingan Alur Proses Bisnis Lama (Manual) vs Baru (Otomatis Tanpa Zona Pintu)</p>
+</div>
+
+<div class="nav-tabs">
+  <button id="btn-lama" class="tab-btn active" onclick="switchTab('lama')">📋 BPMN Proses Bisnis Lama</button>
+  <button id="btn-baru" class="tab-btn" onclick="switchTab('baru')">⚡ BPMN Proses Bisnis Baru</button>
+</div>
+
+<!-- ======================== BPMN LAMA ======================== -->
+<div id="panel-lama" class="diagram-panel">
+  <div class="diagram-card">
+    <div class="card-header">
+      <span class="tag">BPMN Lama</span>
+      <span class="card-title">Diagram Alur Proses Bisnis Lama — Observasi Manual</span>
+    </div>
+    <div class="card-body">
+      <div class="mermaid" id="mermaid-lama">
+flowchart TD
+  A([Mulai]) --> B[Tenaga medis membawa instrumen ke kamar pasien]
+  B --> C[Tenaga medis melakukan cuci tangan]
+  C --> D{Terpantau langsung oleh IPCLN?}
+  D -->|Ya| E{Sesuai SOP 6 Langkah?}
+  D -->|Tidak| F([Selesai — data tidak tercatat])
+  E -->|Ya| G[Catat PATUH secara manual pada kertas]
+  E -->|Tidak| H[Catat TIDAK PATUH secara manual pada kertas]
+  G --> I[Input rekapitulasi ke sistem pelaporan daring]
+  H --> I
+  I --> J([Selesai — laporan tersimpan])
+      </div>
+      <p class="card-caption"><strong>Gambar A.</strong> BPMN Proses Bisnis Lama – Observasi Manual oleh Petugas PPI</p>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== BPMN BARU ======================== -->
+<div id="panel-baru" class="diagram-panel">
+  <div class="diagram-card">
+    <div class="card-header">
+      <span class="tag">BPMN Baru</span>
+      <span class="card-title">Diagram Alur Proses Bisnis Baru — Otomatis &amp; Temporal (Tanpa Zona Pintu)</span>
+    </div>
+    <div class="card-body">
+      <div class="mermaid" id="mermaid-baru">
+flowchart TD
+  S([Mulai]) --> A[Tenaga medis berjalan membawa instrumen medis]
+  A --> B[CCTV merekam area koridor dan wastafel]
+  B --> C[Deteksi YOLOv8 — person dan baki medis]
+  C --> D[Tracking ByteTrack — person ID unik]
+  D --> E{Overlap Ratio lebih dari 0.50?}
+  E -->|Tidak| B
+  E -->|Ya| F[State CARRYING INSTRUMENT]
+  F --> G[Monitor zona cuci tangan — sanitizer dan wastafel]
+  G --> H{Berada di zona cuci tangan?}
+  H -->|Ya| I{Dwell Time lebih dari 2 detik?}
+  I -->|Tidak| G
+  I -->|Ya| J[State HAND WASHED — Status PATUH]
+  H -->|Tidak| K{Window sesi 180 detik berakhir?}
+  K -->|Tidak| G
+  K -->|Ya| L[Status TIDAK PATUH]
+  J --> M[Simpan log PATUH dan snapshot ke database]
+  L --> N[Simpan log TIDAK PATUH dan snapshot ke database]
+  M --> O[Insert monitoring log ke PostgreSQL]
+  N --> O
+  O --> P[Update dashboard Laravel via WebSocket]
+  P --> Z([Selesai])
+      </div>
+      <p class="card-caption"><strong>Gambar B.</strong> BPMN Proses Bisnis Baru – Deteksi Otomatis &amp; Logika Temporal (Tanpa Sensor Pintu)</p>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== INFO BOX ======================== -->
+<div class="info-box">
+  <h4>Penjelasan Perubahan Alur Kepatuhan (Proses Bisnis Baru)</h4>
+  <p>Pada proses bisnis baru, alur evaluasi kepatuhan cuci tangan telah sepenuhnya disesuaikan dengan menghilangkan sensor fisik zona pintu. Penentuan status kini bekerja berdasarkan logika temporal-spasial murni:</p>
+  <ul>
+    <li><strong>Status PATUH</strong>: Langsung terpicu saat perawat yang membawa instrumen medis selesai melakukan cuci tangan dengan dwell time minimal 2 detik di zona wastafel/sanitizer.</li>
+    <li><strong>Status TIDAK PATUH</strong>: Dipicu otomatis saat sesi pelacakan melebihi window 180 detik tanpa ada aktivitas cuci tangan terdeteksi.</li>
+    <li>Log kepatuhan beserta bukti foto snapshot dikirim ke Laravel untuk memperbarui statistik dashboard secara real-time via WebSocket.</li>
+  </ul>
+</div>
+
+<script>
+  // Jangan render secara otomatis pada saat halaman dimuat
+  mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+
+  // Jalankan render setelah DOM siap, lalu sembunyikan panel tidak aktif
+  window.addEventListener('DOMContentLoaded', async () => {
+    // Render semua diagram selagi kedua kontainer bertipe display: block (terlihat)
+    await mermaid.run();
+    
+    // Setelah selesai di-render dengan ukuran yang benar, sembunyikan panel Baru
+    document.getElementById('panel-baru').classList.add('hidden');
+  });
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.diagram-panel').forEach(p => p.classList.add('hidden'));
+    document.getElementById('btn-' + tab).classList.add('active');
+    document.getElementById('panel-' + tab).classList.remove('hidden');
+  }
+</script>
+</body>
+</html>

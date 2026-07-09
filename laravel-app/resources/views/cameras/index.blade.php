@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Manajemen Kamera')
-@section('page-title', '📷 Manajemen Kamera')
+@section('page-title', 'Manajemen Kamera')
 
 @push('styles')
 <style>
@@ -13,7 +13,17 @@
     .cam-row:last-child { border-bottom: none; }
     .cam-row:hover { background: var(--bg-card-hover); }
 
-    .cam-icon { font-size: 22px; width: 36px; text-align: center; }
+    .cam-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-sm);
+        background: var(--accent-dim);
+        color: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
 
     .cam-info { flex: 1; }
     .cam-name { font-weight: 600; font-size: 14px; color: var(--text-primary); }
@@ -22,10 +32,13 @@
     .cam-badge {
         font-size: 11px; font-weight: 600; padding: 3px 8px;
         border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
     }
     .cam-badge.aktif {
         background: var(--green-dim); color: var(--green);
-        border: 1px solid rgba(0,230,118,0.3);
+        border: 1px solid rgba(22,163,74,0.3);
     }
     .cam-badge.nonaktif {
         background: var(--bg-primary); color: var(--text-muted);
@@ -97,14 +110,16 @@
 <div class="page-grid">
     <!-- ── Daftar Kamera ───────────────────────────────────────── -->
     <div class="card camera-table-card">
-        <div class="card-header">
-            <span class="card-title">📷 Daftar Kamera</span>
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+            <span class="card-title" style="display:flex;align-items:center;gap:6px;">
+                <i data-lucide="video" style="width: 16px; height: 16px; color: var(--text-muted);"></i> Daftar Kamera
+            </span>
             <span class="text-muted text-sm">{{ $cameras->count() }} kamera terdaftar</span>
         </div>
 
         @if($cameras->isEmpty())
-        <div style="padding:40px; text-align:center; color:var(--text-muted);">
-            <div style="font-size:48px;margin-bottom:12px;">📷</div>
+        <div style="padding:40px; text-align:center; color:var(--text-muted); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;">
+            <i data-lucide="video-off" style="width: 48px; height: 48px; opacity: 0.3;"></i>
             <div>Belum ada kamera. Tambahkan kamera di sebelah kanan.</div>
         </div>
         @endif
@@ -112,22 +127,26 @@
         @foreach($cameras as $cam)
         <div class="cam-row" id="camrow-{{ $cam->id }}">
             <div class="cam-icon">
-                @if($cam->tipe === 'usb') 🎥
-                @elseif($cam->tipe === 'rtsp') 📡
-                @else 📁 @endif
+                @if($cam->tipe === 'usb') 
+                    <i data-lucide="video" style="width: 18px; height: 18px;"></i>
+                @elseif($cam->tipe === 'rtsp') 
+                    <i data-lucide="radio" style="width: 18px; height: 18px;"></i>
+                @else 
+                    <i data-lucide="file-video" style="width: 18px; height: 18px;"></i> 
+                @endif
             </div>
             <div class="cam-info">
                 <div class="cam-name">{{ $cam->nama_kamera }}</div>
                 <div class="cam-source">{{ $cam->source }}</div>
             </div>
             <span class="cam-badge {{ $cam->aktif ? 'aktif' : 'nonaktif' }}" id="badge-{{ $cam->id }}">
-                {{ $cam->aktif ? '● AKTIF' : '○ OFF' }}
+                <span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;"></span>
+                {{ $cam->aktif ? 'AKTIF' : 'OFF' }}
             </span>
             <div class="cam-actions">
-                <!-- Hapus -->
-                <button class="btn btn-danger btn-sm"
+                <button class="btn btn-danger btn-sm" style="display:inline-flex;align-items:center;justify-content:center;padding:5px;"
                         onclick="deleteCamera({{ $cam->id }}, '{{ $cam->nama_kamera }}')">
-                    🗑
+                    <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
                 </button>
             </div>
         </div>
@@ -138,7 +157,9 @@
     <div>
         <div class="card" style="margin-bottom:16px;">
             <div class="card-header">
-                <span class="card-title">➕ Tambah Kamera</span>
+                <span class="card-title" style="display:flex;align-items:center;gap:6px;">
+                    <i data-lucide="plus" style="width: 16px; height: 16px; color: var(--text-muted);"></i> Tambah Kamera
+                </span>
             </div>
             <div class="card-body">
                 <form action="{{ route('cameras.store') }}" method="POST" id="addCameraForm">
@@ -152,9 +173,9 @@
                         <label class="form-label">Tipe Kamera</label>
                         <select name="tipe" class="form-control" id="tipeSelect"
                                 onchange="onTipeChange()">
-                            <option value="usb">🎥 USB / Webcam</option>
-                            <option value="rtsp">📡 RTSP / IP Camera</option>
-                            <option value="file">📁 File Video</option>
+                            <option value="usb">USB / Webcam</option>
+                            <option value="rtsp">RTSP / IP Camera</option>
+                            <option value="file">File Video</option>
                         </select>
                     </div>
 
@@ -164,8 +185,10 @@
                         <div style="display:flex;gap:8px;">
                             <input type="text" name="source" class="form-control" id="sourceInput"
                                    placeholder="0 (index USB)" required>
-                            <button type="button" class="btn btn-ghost btn-sm" id="scanBtn"
-                                    onclick="scanUsb()" title="Scan USB">🔍</button>
+                            <button type="button" class="btn btn-ghost btn-sm" id="scanBtn" style="display:inline-flex;align-items:center;justify-content:center;padding:5px;"
+                                    onclick="scanUsb()" title="Scan USB">
+                                <i data-lucide="search" style="width: 14px; height: 14px;"></i>
+                            </button>
                         </div>
                         <div id="usbScanResult" class="usb-scan-result" style="display:none;"></div>
                         <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="sourceHint">
@@ -173,14 +196,20 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-full">➕ Tambah Kamera</button>
+                    <button type="submit" class="btn btn-primary w-full" style="display:inline-flex;align-items:center;justify-content:center;gap:4px;">
+                        <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Tambah Kamera
+                    </button>
                 </form>
             </div>
         </div>
 
         <!-- Info Box -->
         <div class="card">
-            <div class="card-header"><span class="card-title">ℹ️ Panduan Source</span></div>
+            <div class="card-header" style="display:flex;align-items:center;gap:6px;">
+                <span class="card-title" style="display:flex;align-items:center;gap:6px;">
+                    <i data-lucide="info" style="width: 16px; height: 16px; color: var(--text-muted);"></i> Panduan Source
+                </span>
+            </div>
             <div class="card-body" style="font-size:13px;line-height:1.8;color:var(--text-secondary);">
                 <strong style="color:var(--accent)">USB / Webcam:</strong><br>
                 <code style="background:var(--bg-primary);padding:2px 6px;border-radius:4px;font-size:12px;">0</code> — Webcam bawaan<br>
@@ -230,20 +259,21 @@
     async function scanUsb() {
         const btn = document.getElementById('scanBtn');
         const res = document.getElementById('usbScanResult');
-        btn.textContent = '⏳';
+        btn.innerHTML = '<i data-lucide="loader" class="animate-spin" style="width:14px;height:14px;"></i>';
         btn.disabled = true;
+        lucide.createIcons();
 
         try {
             const data = await fetch('/cameras/scan/usb').then(r => r.json());
             res.style.display = 'block';
             if (data.error) {
-                res.innerHTML = `<div style="color:var(--red);font-size:12px;">❌ ${data.error}</div>`;
+                res.innerHTML = `<div style="color:var(--red);font-size:12px;display:flex;align-items:center;gap:4px;"><i data-lucide="alert-circle" style="width:14px;height:14px;"></i> ${data.error}</div>`;
             } else if (!data.length) {
                 res.innerHTML = `<div style="color:var(--text-muted);font-size:12px;">Tidak ada USB camera terdeteksi</div>`;
             } else {
                 res.innerHTML = data.map(c => `
                     <div class="usb-item">
-                        <span>🎥 ${c.label}</span>
+                        <span style="display:flex;align-items:center;gap:4px;"><i data-lucide="video" style="width:14px;height:14px;"></i> ${c.label}</span>
                         <button class="btn btn-ghost btn-sm" onclick="document.getElementById('sourceInput').value='${c.source}'">
                             Pilih
                         </button>
@@ -251,12 +281,13 @@
                 `).join('');
             }
         } catch {
-            res.innerHTML = `<div style="color:var(--red);font-size:12px;">❌ AI Service tidak tersedia</div>`;
+            res.innerHTML = `<div style="color:var(--red);font-size:12px;display:flex;align-items:center;gap:4px;"><i data-lucide="alert-circle" style="width:14px;height:14px;"></i> AI Service tidak tersedia</div>`;
             res.style.display = 'block';
         }
 
-        btn.textContent = '🔍';
+        btn.innerHTML = '<i data-lucide="search" style="width:14px;height:14px;"></i>';
         btn.disabled = false;
+        lucide.createIcons();
     }
 
     function deleteCamera(id, name) {

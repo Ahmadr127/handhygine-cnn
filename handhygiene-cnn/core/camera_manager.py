@@ -322,7 +322,6 @@ class CameraProcessor:
         zone_colors = {
             "sanitizer": (0, 255, 0),    # hijau
             "wastafel":  (255, 255, 0),  # kuning
-            "pintu":     (0, 0, 255),    # merah
         }
         for zone in self.zone_mgr.zones:
             color = zone_colors.get(zone["tipe"], (128, 128, 128))

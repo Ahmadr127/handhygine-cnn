@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Konfigurasi Zona — ' . $camera->nama_kamera)
-@section('page-title', '🗺 Konfigurasi Zona: ' . $camera->nama_kamera)
+@section('page-title', 'Konfigurasi Zona: ' . $camera->nama_kamera)
 
 @push('styles')
 <style>
@@ -95,12 +95,15 @@
 @section('content')
 
 <div style="margin-bottom:12px;">
-    <a href="{{ route('cameras.index') }}" class="btn btn-ghost btn-sm">← Kembali ke Kamera</a>
+    <a href="{{ route('cameras.index') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:4px;">
+        <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i> Kembali ke Kamera
+    </a>
 </div>
 
 @if(!$camera->group_id)
-<div class="alert alert-danger">
-    ⚠️ Kamera ini belum dimasukkan ke Grup Monitoring. Anda harus memasukkannya ke grup (melalui menu Grup Monitoring) sebelum dapat mengatur zona.
+<div class="alert alert-danger" style="display:flex;align-items:center;gap:8px;">
+    <i data-lucide="alert-triangle" style="width: 16px; height: 16px;"></i>
+    Kamera ini belum dimasukkan ke Grup Monitoring. Anda harus memasukkannya ke grup (melalui menu Grup Monitoring) sebelum dapat mengatur zona.
 </div>
 @endif
 
@@ -110,12 +113,16 @@
         <div class="canvas-toolbar">
             <span style="font-size:12px;color:var(--text-muted);margin-right:4px;">Tipe Zona:</span>
             <button class="tipe-btn sanitizer active" id="btn-sanitizer"
-                    onclick="setTipe('sanitizer')">🟢 Sanitizer</button>
+                    onclick="setTipe('sanitizer')">Sanitizer</button>
             <button class="tipe-btn wastafel" id="btn-wastafel"
-                    onclick="setTipe('wastafel')">🟡 Wastafel</button>
+                    onclick="setTipe('wastafel')">Wastafel</button>
             <div style="flex:1"></div>
-            <button class="btn btn-ghost btn-sm" onclick="undoPoint()">↩ Undo</button>
-            <button class="btn btn-ghost btn-sm" onclick="clearCanvas()">🗑 Clear</button>
+            <button class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:4px;" onclick="undoPoint()">
+                <i data-lucide="undo-2" style="width:12px;height:12px;"></i> Undo
+            </button>
+            <button class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:4px;" onclick="clearCanvas()">
+                <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Clear
+            </button>
         </div>
 
         <div class="canvas-container">
@@ -133,15 +140,19 @@
         <div style="padding:12px 16px;background:var(--bg-secondary);border-top:1px solid var(--border);">
             <input type="text" id="zonaName" class="nama-input"
                    placeholder="Nama zona (cth: Sanitizer Depan)">
-            <button class="btn btn-primary w-full" onclick="saveZone()">💾 Simpan Zona</button>
+            <button class="btn btn-primary w-full" style="display:inline-flex;align-items:center;justify-content:center;gap:4px;" onclick="saveZone()">
+                <i data-lucide="save" style="width:14px;height:14px;"></i> Simpan Zona
+            </button>
         </div>
     </div>
 
     <!-- Zone List Panel -->
     <div>
         <div class="card">
-            <div class="card-header">
-                <span class="card-title">📌 Zona Tersimpan</span>
+            <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+                <span class="card-title" style="display:flex;align-items:center;gap:6px;">
+                    <i data-lucide="map-pin" style="width: 16px; height: 16px; color: var(--text-muted);"></i> Zona Tersimpan
+                </span>
                 <span class="badge badge-monitoring">{{ $zones->count() }} zona</span>
             </div>
             <div class="card-body">
@@ -159,17 +170,19 @@
                             <div class="zone-type {{ $zone->tipe_zona }}">{{ $zone->tipe_zona }}</div>
                             <div class="zone-points">{{ count($zone->polygon_points) }} titik</div>
                         </div>
-                        <button class="btn btn-danger btn-sm"
-                                onclick="deleteZone({{ $zone->id }})">🗑</button>
+                        <button class="btn btn-danger btn-sm" style="display:inline-flex;align-items:center;justify-content:center;padding:5px;"
+                                onclick="deleteZone({{ $zone->id }})">
+                            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                        </button>
                     </div>
                     @endforeach
                 </div>
 
                 @if($zones->isNotEmpty())
                 <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-                    <div class="zone-legend" style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;">
-                        <span>🟢 Sanitizer</span>
-                        <span>🟡 Wastafel</span>
+                    <div class="zone-legend" style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;align-items:center;">
+                        <span style="display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#00e676;"></span> Sanitizer</span>
+                        <span style="display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ffd32a;"></span> Wastafel</span>
                     </div>
                     <p style="font-size:11px;color:var(--text-muted);margin-top:8px;">
                         Minimal 1 zona cuci tangan (sanitizer/wastafel) diperlukan agar sistem bekerja.
@@ -198,103 +211,102 @@
     const existingZones = @json($zones->map(fn($z) => [
         'nama'   => $z->nama_zona,
         'tipe'   => $z->tipe_zona,
-        'points' => $z->polygon_points
+        'points' => $z->polygon_points,
     ]));
-
-    const COLORS = {
-        sanitizer: '#00e676',
-        wastafel:  '#ffd32a',
-    };
 
     function setTipe(tipe) {
         currentTipe = tipe;
-        ['sanitizer','wastafel'].forEach(t => {
-            document.getElementById(`btn-${t}`).classList.toggle('active', t === tipe);
+        document.getElementById('btn-sanitizer').className = 'tipe-btn sanitizer' + (tipe === 'sanitizer' ? ' active' : '');
+        document.getElementById('btn-wastafel').className = 'tipe-btn wastafel' + (tipe === 'wastafel' ? ' active' : '');
+    }
+
+    // Stream rendering
+    const img = document.getElementById('videoStream');
+    const loading = document.getElementById('loadingStream');
+    const activeStreamUrl = `{{ $ai_service_url }}/api/cameras/stream/${CAMERA_ID}`;
+
+    img.onload = () => {
+        loading.style.display = 'none';
+        img.style.display = 'block';
+    };
+
+    img.onerror = () => {
+        loading.textContent = 'Failed to load video stream from AI Service';
+    };
+
+    img.src = activeStreamUrl;
+
+    // Draw handler
+    function draw() {
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+
+        // Draw existing zones
+        existingZones.forEach(z => {
+            if (!z.points || !z.points.length) return;
+            ctx.beginPath();
+            ctx.moveTo(z.points[0][0], z.points[0][1]);
+            for(let i=1; i<z.points.length; i++) {
+                ctx.lineTo(z.points[i][0], z.points[i][1]);
+            }
+            ctx.closePath();
+            ctx.fillStyle = z.tipe === 'sanitizer' ? 'rgba(0,230,118,0.2)' : 'rgba(255,211,42,0.2)';
+            ctx.fill();
+            ctx.strokeStyle = z.tipe === 'sanitizer' ? '#00e676' : '#ffd32a';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Label
+            ctx.fillStyle = '#fff';
+            ctx.font = '11px Inter, sans-serif';
+            ctx.fillText(z.nama, z.points[0][0], z.points[0][1] - 5);
         });
+
+        // Draw current polygon
+        if (points.length) {
+            ctx.beginPath();
+            ctx.moveTo(points[0][0], points[0][1]);
+            for(let i=1; i<points.length; i++) {
+                ctx.lineTo(points[i][0], points[i][1]);
+            }
+            ctx.strokeStyle = currentTipe === 'sanitizer' ? '#00e676' : '#ffd32a';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw points
+            points.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p[0], p[1], 4, 0, 2*Math.PI);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+                ctx.strokeStyle = currentTipe === 'sanitizer' ? '#00e676' : '#ffd32a';
+                ctx.stroke();
+            });
+        }
     }
 
-    function getCanvasPoint(e) {
+    canvas.addEventListener('click', e => {
         const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width  / rect.width;
+        const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
-        return {
-            x: Math.round((e.clientX - rect.left) * scaleX),
-            y: Math.round((e.clientY - rect.top)  * scaleY),
-        };
-    }
+        const x = Math.round((e.clientX - rect.left) * scaleX);
+        const y = Math.round((e.clientY - rect.top) * scaleY);
 
-    canvas.addEventListener('click', (e) => {
-        if (e.detail === 2) return; // ignore dblclick
-        const pt = getCanvasPoint(e);
-        points.push(pt);
+        points.push([x, y]);
         document.getElementById('pointCount').textContent = `${points.length} titik`;
         draw();
     });
 
-    canvas.addEventListener('dblclick', () => finishPolygon());
-    document.addEventListener('keydown', e => { if (e.key === 'Enter') finishPolygon(); });
+    canvas.addEventListener('dblclick', () => {
+        if (points.length < 3) return;
+        draw();
+    });
 
-    function finishPolygon() {
-        if (points.length >= 3) {
-            draw(true); // close polygon
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            if (points.length < 3) return;
+            draw();
         }
-    }
-
-    function draw(closed = false) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Draw existing zones
-        existingZones.forEach(zone => {
-            drawZone(zone.points, zone.tipe, zone.nama, true);
-        });
-
-        // Draw current polygon
-        if (points.length === 0) return;
-        const color = COLORS[currentTipe];
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        points.forEach(p => ctx.lineTo(p.x, p.y));
-        if (closed) ctx.closePath();
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        if (closed) {
-            ctx.fillStyle = color + '33';
-            ctx.fill();
-        }
-
-        // Draw points
-        points.forEach((p, i) => {
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
-            ctx.fillStyle = color;
-            ctx.fill();
-        });
-    }
-
-    function drawZone(pts, tipe, nama, filled) {
-        if (!pts || pts.length < 2) return;
-        const color = COLORS[tipe] || '#888';
-        ctx.beginPath();
-        ctx.moveTo(pts[0].x, pts[0].y);
-        pts.forEach(p => ctx.lineTo(p.x, p.y));
-        ctx.closePath();
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        if (filled) {
-            ctx.fillStyle = color + '33';
-            ctx.fill();
-        }
-        // Label
-        const cx = pts.reduce((s,p) => s + p.x, 0) / pts.length;
-        const cy = pts.reduce((s,p) => s + p.y, 0) / pts.length;
-        ctx.fillStyle = color;
-        ctx.font = 'bold 12px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(nama, cx, cy);
-    }
+    });
 
     function undoPoint() {
         points.pop();
@@ -309,77 +321,58 @@
     }
 
     async function saveZone() {
-        if (points.length < 3) {
-            alert('Minimal 3 titik untuk membuat zona polygon!');
+        const name = document.getElementById('zonaName').value.trim();
+        if (!name) {
+            alert('Nama zona harus diisi!');
             return;
         }
-        const namaInput = document.getElementById('zonaName');
-        const nama = namaInput.value.trim() || (currentTipe + '_zone');
+        if (points.length < 3) {
+            alert('Gambarkan minimal 3 titik polygon di atas video!');
+            return;
+        }
 
-        const res = await fetch(`/cameras/${CAMERA_ID}/zones`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': CSRF,
-            },
-            body: JSON.stringify({
-                nama_zona: nama,
-                tipe_zona: currentTipe,
-                polygon_points: points,
-            }),
-        });
+        try {
+            const res = await fetch(`/cameras/${CAMERA_ID}/zones`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': CSRF
+                },
+                body: JSON.stringify({
+                    nama_zona: name,
+                    tipe_zona: currentTipe,
+                    polygon_points: points
+                })
+            });
 
-        if (res.ok) {
-            alert(`✅ Zona "${nama}" berhasil disimpan!`);
-            location.reload();
-        } else {
-            alert('❌ Gagal menyimpan zona');
+            if (res.ok) {
+                location.reload();
+            } else {
+                alert('Gagal menyimpan zona');
+            }
+        } catch {
+            alert('Terjadi kesalahan jaringan');
         }
     }
 
     async function deleteZone(id) {
         if (!confirm('Hapus zona ini?')) return;
-        
-        const res = await fetch(`/cameras/zones/${id}`, {
-            method: 'DELETE',
-            headers: { 'X-CSRF-TOKEN': CSRF }
-        });
-
-        if (res.ok) {
-            location.reload();
-        } else {
-            alert('❌ Gagal menghapus zona');
+        try {
+            const res = await fetch(`/cameras/zones/${id}`, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-TOKEN': CSRF }
+            });
+            if (res.ok) {
+                location.reload();
+            } else {
+                alert('Gagal menghapus zona');
+            }
+        } catch {
+            alert('Terjadi kesalahan jaringan');
         }
     }
 
-    // Initial draw existing zones
-    draw();
-
-    // Video Stream WebSocket
-    const AI_WS = '{{ config('services.handhygiene-cnn.ws_url', 'ws://localhost:8001') }}';
-    const videoStream = document.getElementById('videoStream');
-    const loadingStream = document.getElementById('loadingStream');
-
-    const ws = new WebSocket(`${AI_WS}/ws/preview/${CAMERA_ID}`);
-
-    ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.error) return;
-        videoStream.src = 'data:image/jpeg;base64,' + data.frame;
-        videoStream.style.display = 'block';
-        loadingStream.style.display = 'none';
-    };
-
-    ws.onerror = () => {
-        loadingStream.textContent = 'Gagal terhubung ke AI Service.';
-        loadingStream.style.display = 'block';
-        videoStream.style.display = 'none';
-    };
-
-    ws.onclose = () => {
-        loadingStream.textContent = 'Stream terputus. Muat ulang halaman.';
-        loadingStream.style.display = 'block';
-        videoStream.style.display = 'none';
-    };
+    // Initial render
+    setTimeout(draw, 500);
 </script>
 @endpush

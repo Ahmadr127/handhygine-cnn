@@ -15,7 +15,6 @@ class ZoneManager:
     Zone types:
         'sanitizer' — area hand sanitizer
         'wastafel'  — area wastafel/sink
-        'pintu'     — area pintu masuk (deprecated, hanya masih ditampilkan jika tersimpan di DB)
     """
 
     def __init__(self, camera_id: int):
@@ -82,11 +81,6 @@ class ZoneManager:
                 if zone["polygon"].intersects(person_rect):
                     return True
         return False
-
-    def is_in_door_zone(self, x: float, y: float) -> bool:
-        """True jika titik ada di zona pintu."""
-        zones = self.check_point(x, y)
-        return "pintu" in zones
 
     def has_zones(self) -> bool:
         return len(self.zones) > 0

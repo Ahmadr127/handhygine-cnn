@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Dashboard Monitoring')
-@section('page-title', '📊 Dashboard Monitoring')
+@section('page-title', 'Dashboard Monitoring')
 
 @push('styles')
 <style>
@@ -95,7 +95,7 @@
     .camera-slot-status.patuh    { background: var(--green-dim); color: var(--green); }
     .camera-slot-status.tidak    { background: var(--red-dim); color: var(--red); }
     .camera-slot-status.aktif    { background: var(--accent-dim); color: var(--accent); }
-    .camera-slot-status.idle     { background: rgba(0,0,0,0.5); color: var(--text-muted); }
+    .camera-slot-status.idle     { background: rgba(0,0,0,0.5); color: var(--sidebar-text-secondary); }
 
     .camera-canvas-wrap {
         flex: 1;
@@ -118,7 +118,7 @@
         align-items: center;
         justify-content: center;
         gap: 12px;
-        color: var(--text-muted);
+        color: var(--sidebar-text-secondary);
         font-size: 13px;
         height: 100%;
     }
@@ -161,7 +161,7 @@
 
     .btn-connect.connect {
         background: var(--green);
-        color: #000;
+        color: #fff;
     }
 
     .btn-connect.disconnect {
@@ -222,7 +222,7 @@
 <!-- ── Group Selector ────────────────────────────────────────────────── -->
 <div class="card" style="padding:8px 16px; display:flex; align-items:center; gap:12px; margin-bottom:12px;">
     <span style="font-weight:600;font-size:12px;">Grup Monitoring:</span>
-    <form method="GET" action="{{ route('dashboard') }}" style="display:flex;gap:8px;flex:1;">
+    <form method="GET" action="{{ route('dashboard') }}" style="display:flex;gap:8px;flex:1;align-items:center;">
         <select name="group_id" class="form-control" style="width:auto;min-width:180px;font-size:12px;padding:4px 8px;" onchange="this.form.submit()">
             @if($groups->isEmpty())
                 <option value="">-- Belum ada grup --</option>
@@ -234,13 +234,18 @@
             @endforeach
         </select>
         @if($selected_group)
-        <span class="badge {{ $selected_group->aktif ? 'badge-patuh' : 'badge-tidak-patuh' }}" style="margin-left:auto;font-size:11px;padding:4px 8px;">
-            {{ $selected_group->aktif ? '● GRUP AKTIF' : '○ GRUP OFF' }}
+        <span class="badge {{ $selected_group->aktif ? 'badge-patuh' : 'badge-tidak-patuh' }}" style="margin-left:auto;font-size:11px;padding:4px 8px;display:flex;align-items:center;gap:4px;">
+            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;"></span>
+            {{ $selected_group->aktif ? 'GRUP AKTIF' : 'GRUP OFF' }}
         </span>
         @endif
     </form>
-    <button id="btn-multi-connect" class="btn btn-success" style="padding:4px 10px;font-size:12px;background:var(--green-dim);color:var(--green);border:1px solid var(--green);" onclick="toggleAllCameras()">▶ Connect Semua</button>
-    <button class="btn btn-primary" style="padding:4px 10px;font-size:12px;" onclick="toggleFullscreen('cameraGrid')" title="Fullscreen Grid">⛶ Fullscreen</button>
+    <button id="btn-multi-connect" class="btn btn-success" style="padding:4px 10px;font-size:12px;background:var(--green-dim);color:var(--green);border:1px solid var(--green);display:flex;align-items:center;gap:4px;" onclick="toggleAllCameras()">
+        <i data-lucide="play" style="width:12px;height:12px;"></i> Connect Semua
+    </button>
+    <button class="btn btn-primary" style="padding:4px 10px;font-size:12px;display:flex;align-items:center;gap:4px;" onclick="toggleFullscreen('cameraGrid')" title="Fullscreen Grid">
+        <i data-lucide="maximize" style="width:12px;height:12px;"></i> Fullscreen
+    </button>
 </div>
 
 <!-- ── Grid Kamera dalam Grup ────────────────────────────────────────── -->
@@ -252,11 +257,14 @@
 
                 <!-- Header overlay -->
                 <div class="camera-frame-header">
-                    <span class="camera-frame-name" id="fname-{{ $slot }}">
-                        {{ $cam->tipe_icon }} {{ $cam->nama_kamera }}
+                    <span class="camera-frame-name" id="fname-{{ $slot }}" style="display:flex;align-items:center;gap:6px;">
+                        <i data-lucide="video" style="width:14px;height:14px;color:#fff;"></i>
+                        {{ $cam->nama_kamera }}
                     </span>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <button class="btn-icon" onclick="toggleFullscreen('frame-{{ $slot }}')" title="Fullscreen">⛶</button>
+                        <button class="btn-icon" style="display:flex;align-items:center;justify-content:center;padding:4px;" onclick="toggleFullscreen('frame-{{ $slot }}')" title="Fullscreen">
+                            <i data-lucide="maximize" style="width: 12px; height: 12px;"></i>
+                        </button>
                         <span class="camera-slot-status {{ $cam->aktif ? 'aktif' : 'idle' }}" id="fstatus-{{ $slot }}">
                             {{ $cam->aktif ? 'LIVE' : 'IDLE' }}
                         </span>
@@ -269,7 +277,7 @@
                 <!-- Video canvas -->
                 <div class="camera-canvas-wrap" id="canvasWrap-{{ $slot }}">
                     <div class="camera-placeholder" id="placeholder-{{ $slot }}" style="display: {{ $cam->aktif ? 'none' : 'flex' }}">
-                        <div class="camera-placeholder-icon">📷</div>
+                        <i data-lucide="video-off" style="width: 36px; height: 36px; opacity: 0.4; margin-bottom: 8px;"></i>
                         <div>{{ $cam->aktif ? 'Connecting...' : 'Kamera OFF' }}</div>
                     </div>
                     <img id="canvas-{{ $slot }}" class="camera-canvas" style="display: {{ $cam->aktif ? 'block' : 'none' }}" alt="Camera {{ $slot }}">
@@ -278,11 +286,15 @@
                 <!-- Bottom selector -->
                 <div class="camera-selector">
                     <input type="hidden" id="select-{{ $slot }}" value="{{ $cam->id }}">
-                    <button class="btn-connect {{ $cam->aktif ? 'disconnect' : 'connect' }}" id="btn-{{ $slot }}"
+                    <button class="btn-connect {{ $cam->aktif ? 'disconnect' : 'connect' }}" id="btn-{{ $slot }}" style="display:flex;align-items:center;gap:4px;"
                             onclick="toggleCamera({{ $slot }})">
-                        {{ $cam->aktif ? '⏹ Stop' : '▶ Connect' }}
+                        @if($cam->aktif)
+                            <i data-lucide="square" style="width: 12px; height: 12px;"></i> Stop
+                        @else
+                            <i data-lucide="play" style="width: 12px; height: 12px;"></i> Connect
+                        @endif
                     </button>
-                    <span style="font-size:11px;color:var(--text-muted);margin-left:auto;">ID: {{ $cam->id }}</span>
+                    <span style="font-size:11px;color:rgba(255,255,255,0.5);margin-left:auto;">ID: {{ $cam->id }}</span>
                 </div>
             </div>
         @endforeach
@@ -290,25 +302,31 @@
         <!-- Fill empty slots up to 4 if less than 4 cameras -->
         @for($i = $selected_group->cameras->count() + 1; $i <= 4; $i++)
             <div class="camera-frame" style="border: 1px dashed var(--border); background: var(--bg-primary); display:flex; align-items:center; justify-content:center; flex-direction:column; color:var(--text-muted); font-size:13px; gap:8px;">
-                <div style="font-size:32px;opacity:0.3">➕</div>
+                <i data-lucide="plus-circle" style="width: 28px; height: 28px; opacity: 0.3;"></i>
                 <div>Slot Kosong</div>
             </div>
         @endfor
     @else
         <div style="grid-column: 1 / -1; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg-card); border:1px dashed var(--border); border-radius:var(--radius); min-height:300px; color:var(--text-muted);">
-            <div style="font-size:48px; margin-bottom:16px;">📹</div>
+            <i data-lucide="video-off" style="width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.4;"></i>
             <div style="font-size:16px; font-weight:600; color:var(--text-primary); margin-bottom:8px;">Belum Ada Kamera di Grup Ini</div>
             <div style="font-size:13px; margin-bottom:16px;">Tambahkan kamera ke grup melalui menu Manajemen Grup.</div>
-            <a href="{{ route('groups.index') }}" class="btn btn-primary">Kelola Grup</a>
+            <a href="{{ route('groups.index') }}" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:4px;">
+                <i data-lucide="settings" style="width: 14px; height: 14px;"></i> Kelola Grup
+            </a>
         </div>
     @endif
 </div>
 
 <!-- ── Log Terbaru ─────────────────────────────────────────────────── -->
 <div class="card">
-    <div class="card-header">
-        <span class="card-title">🕐 Log Terbaru</span>
-        <a href="{{ route('monitoring.index') }}" class="btn btn-ghost btn-sm">Lihat Semua →</a>
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="card-title" style="display:flex;align-items:center;gap:6px;">
+            <i data-lucide="clock" style="width: 16px; height: 16px; color: var(--text-muted);"></i> Log Terbaru
+        </span>
+        <a href="{{ route('monitoring.index') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:4px;">
+            Lihat Semua <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+        </a>
     </div>
     <div class="recent-logs-card" id="recentLogsContainer">
         @forelse($recent_logs as $log)
@@ -316,8 +334,12 @@
             <div class="log-status-dot {{ $log->status === 'patuh' ? 'patuh' : 'tidak' }}"></div>
             <span class="log-person">Person #{{ $log->person_id }}</span>
             <span class="log-camera">{{ $log->camera?->nama_kamera ?? 'Unknown' }}</span>
-            <span class="badge {{ $log->status === 'patuh' ? 'badge-patuh' : 'badge-tidak-patuh' }}">
-                {{ $log->status === 'patuh' ? '✅ Patuh' : '❌ Tidak Patuh' }}
+            <span class="badge {{ $log->status === 'patuh' ? 'badge-patuh' : 'badge-tidak-patuh' }}" style="display:inline-flex;align-items:center;gap:4px;">
+                @if($log->status === 'patuh')
+                    <i data-lucide="check-circle" style="width:12px;height:12px;"></i> Patuh
+                @else
+                    <i data-lucide="x-circle" style="width:12px;height:12px;"></i> Tidak Patuh
+                @endif
             </span>
             <span class="log-time">{{ $log->waktu->format('H:i:s') }}</span>
         </div>
@@ -344,7 +366,7 @@
             for (let slot = 1; slot <= 4; slot++) {
                 if (slotState[slot]) disconnect(slot);
             }
-            btn.innerHTML = '▶ Connect Semua';
+            btn.innerHTML = '<i data-lucide="play" style="width:12px;height:12px;"></i> Connect Semua';
             btn.style.background = 'var(--green-dim)';
             btn.style.color = 'var(--green)';
             btn.style.borderColor = 'var(--green)';
@@ -354,12 +376,13 @@
                 const sel = document.getElementById(`select-${slot}`);
                 if (sel && sel.value && !slotState[slot]) connect(slot);
             }
-            btn.innerHTML = '⏹ Stop Semua';
+            btn.innerHTML = '<i data-lucide="square" style="width:12px;height:12px;"></i> Stop Semua';
             btn.style.background = 'var(--red-dim)';
             btn.style.color = 'var(--red)';
             btn.style.borderColor = 'var(--red)';
             allConnected = true;
         }
+        lucide.createIcons();
     }
 
     function toggleFullscreen(elemId) {
@@ -374,7 +397,7 @@
     }
 
     function onCameraSelect(slot) {
-        // Obsolete function since select is removed, but kept for safe error handling just in case.
+        // Obsolete
     }
 
     // Auto-connect if camera is already active
@@ -403,7 +426,6 @@
         if (!cameraId) return;
 
         if (!isAutoStart) {
-            // Start monitoring on AI service manually
             try {
                 const res = await fetch(`${AI_WS.replace('ws://', 'http://')}/api/cameras/${cameraId}/start`, {method: 'POST'});
                 if (!res.ok) console.error(`[Cam ${slot}] Failed to start on AI service`);
@@ -424,11 +446,12 @@
         ws.onopen = () => {
             placeholder.style.display = 'none';
             img.style.display = 'block';
-            btn.textContent = '⏹ Stop';
+            btn.innerHTML = '<i data-lucide="square" style="width:12px;height:12px;"></i> Stop';
             btn.className = 'btn-connect disconnect';
             statusEl.textContent = 'LIVE';
             statusEl.className = 'camera-slot-status aktif';
             frameEl.className = 'camera-frame status-aktif';
+            lucide.createIcons();
         };
 
         ws.onmessage = (event) => {
@@ -438,10 +461,8 @@
                 return;
             }
 
-            // Update frame
             img.src = 'data:image/jpeg;base64,' + data.frame;
 
-            // FPS counter
             frameCount++;
             const now = Date.now();
             if (now - lastTime >= 1000) {
@@ -487,15 +508,15 @@
         img.style.display = 'none';
         img.src = '';
         placeholder.style.display = 'flex';
-        btn.textContent = '▶ Connect';
+        btn.innerHTML = '<i data-lucide="play" style="width:12px;height:12px;"></i> Connect';
         btn.className = 'btn-connect connect';
         statusEl.textContent = 'IDLE';
         statusEl.className = 'camera-slot-status idle';
         frameEl.className = 'camera-frame';
         fpsEl.textContent = '0 fps';
+        lucide.createIcons();
     }
 
-    // Refresh statistik & log setiap 10 detik
     async function refreshStats() {
         try {
             const res = await fetch('/api/stats/today');
@@ -522,12 +543,15 @@
                     <div class="log-status-dot ${log.status === 'patuh' ? 'patuh' : 'tidak'}"></div>
                     <span class="log-person">Person #${log.person_id}</span>
                     <span class="log-camera">${log.nama_kamera || 'Unknown'}</span>
-                    <span class="badge ${log.status === 'patuh' ? 'badge-patuh' : 'badge-tidak-patuh'}">
-                        ${log.status === 'patuh' ? '✅ Patuh' : '❌ Tidak Patuh'}
+                    <span class="badge ${log.status === 'patuh' ? 'badge-patuh' : 'badge-tidak-patuh'}" style="display:inline-flex;align-items:center;gap:4px;">
+                        ${log.status === 'patuh' 
+                            ? '<i data-lucide="check-circle" style="width:12px;height:12px;"></i> Patuh' 
+                            : '<i data-lucide="x-circle" style="width:12px;height:12px;"></i> Tidak Patuh'}
                     </span>
                     <span class="log-time">${new Date(log.waktu).toLocaleTimeString('id-ID')}</span>
                 </div>
             `).join('');
+            lucide.createIcons();
         } catch {}
     }
 
