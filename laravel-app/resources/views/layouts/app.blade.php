@@ -22,13 +22,13 @@
             --border:        #cbd5e1;  /* Abu-abu Slate 300 untuk border yang tegas */
             --border-light:  #e2e8f0;  /* Abu-abu Slate 200 */
 
-            /* Area Sidebar (Tema Gelap Premium) */
-            --sidebar-bg:             #0f172a;  /* Slate 900 */
-            --sidebar-border:         #1e293b;  /* Slate 800 */
-            --sidebar-text-primary:   #f8fafc;  /* Slate 50 */
-            --sidebar-text-secondary: #94a3b8;  /* Slate 400 */
-            --sidebar-text-muted:     #64748b;  /* Slate 500 */
-            --sidebar-nav-hover:      #1e293b;  /* Slate 800 */
+            /* Area Sidebar (Tema Biru Premium Konsisten dengan Brand) */
+            --sidebar-bg:             #1e3a8a;  /* Deep Royal Blue / Blue 900 */
+            --sidebar-border:         rgba(255, 255, 255, 0.1);
+            --sidebar-text-primary:   #ffffff;  /* Putih */
+            --sidebar-text-secondary: #dbeafe;  /* Blue 100 - kontras tinggi & nyaman di mata */
+            --sidebar-text-muted:     #93c5fd;  /* Blue 300 - teks penjelas/judul section */
+            --sidebar-nav-hover:      rgba(255, 255, 255, 0.08); /* Hover semi-transparan */
 
             /* Warna Aksen & Status */
             --accent:        #2563eb;  /* Biru Royal */
@@ -135,9 +135,9 @@
         }
 
         .nav-item.active {
-            background: rgba(59, 130, 246, 0.15);
-            color: #38bdf8;
-            border: 1px solid rgba(56, 189, 248, 0.25);
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.25);
         }
 
         .nav-item .nav-icon {
@@ -497,7 +497,7 @@
     <!-- Sidebar -->
     <nav class="sidebar">
         <div class="sidebar-logo" style="display: flex; align-items: center; gap: 10px;">
-            <i data-lucide="activity" style="color: #38bdf8; width: 22px; height: 22px; flex-shrink: 0;"></i>
+            <i data-lucide="activity" style="color: #ffffff; width: 22px; height: 22px; flex-shrink: 0;"></i>
             <div>
                 <div class="sidebar-logo-title" style="color: #ffffff;">Hand Hygiene</div>
                 <div class="sidebar-logo-sub">Monitor System v1.0</div>

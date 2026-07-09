@@ -214,6 +214,9 @@ class CameraProcessor:
             in_handwash = self.zone_mgr.bbox_intersects_handwash_zone(x1s, y1s, x2s, y2s)
             state = "monitoring"
 
+            # Update last seen timestamp & frame in group engine
+            self.group_engine.update_last_seen(self.camera_id, str(tid), frame, bbox)
+
             if near_instrument:
                 self.group_engine.report_instrument(self.camera_id, str(tid), conf, frame)
                 state = "carrying_instrument"

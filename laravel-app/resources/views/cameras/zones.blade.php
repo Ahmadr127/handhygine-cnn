@@ -208,11 +208,11 @@
     let points = [];
 
     // Existing zones for display
-    const existingZones = @json($zones->map(fn($z) => [
+    const existingZones = {!! json_encode($zones->map(fn($z) => [
         'nama'   => $z->nama_zona,
         'tipe'   => $z->tipe_zona,
         'points' => $z->polygon_points,
-    ]));
+    ])) !!};
 
     function setTipe(tipe) {
         currentTipe = tipe;
@@ -220,21 +220,38 @@
         document.getElementById('btn-wastafel').className = 'tipe-btn wastafel' + (tipe === 'wastafel' ? ' active' : '');
     }
 
-    // Stream rendering
+    // Stream rendering via WebSocket preview
     const img = document.getElementById('videoStream');
     const loading = document.getElementById('loadingStream');
-    const activeStreamUrl = `{{ $ai_service_url }}/api/cameras/stream/${CAMERA_ID}`;
+    const wsUrl = "{{ config('services.handhygiene-cnn.url', 'http://localhost:8001') }}".replace('http://', 'ws://').replace('https://', 'wss://') + `/ws/preview/${CAMERA_ID}`;
 
-    img.onload = () => {
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
         loading.style.display = 'none';
         img.style.display = 'block';
     };
 
-    img.onerror = () => {
-        loading.textContent = 'Failed to load video stream from AI Service';
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.frame) {
+            img.src = 'data:image/jpeg;base64,' + data.frame;
+        } else if (data.error) {
+            loading.textContent = data.error;
+            loading.style.display = 'block';
+            img.style.display = 'none';
+        }
     };
 
-    img.src = activeStreamUrl;
+    ws.onerror = () => {
+        loading.textContent = 'Failed to connect to AI Service stream';
+        loading.style.display = 'block';
+        img.style.display = 'none';
+    };
+
+    window.addEventListener('beforeunload', () => {
+        ws.close();
+    });
 
     // Draw handler
     function draw() {

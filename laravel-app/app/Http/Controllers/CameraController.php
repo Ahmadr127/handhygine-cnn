@@ -113,16 +113,32 @@ class CameraController extends Controller
 
         // Sync ke AI Service
         try {
-            Http::timeout(5)->post(
+            $formattedPoints = [];
+            foreach ($zone->polygon_points as $pt) {
+                if (is_array($pt) && count($pt) >= 2) {
+                    $formattedPoints[] = [
+                        'x' => (int) $pt[0],
+                        'y' => (int) $pt[1]
+                    ];
+                }
+            }
+
+            $response = Http::timeout(5)->post(
                 config('services.handhygiene-cnn.url') . "/api/cameras/{$camera->id}/zones",
                 [
                     'group_id'       => $zone->group_id,
                     'nama_zona'      => $zone->nama_zona,
                     'tipe_zona'      => $zone->tipe_zona,
-                    'polygon_points' => $zone->polygon_points,
+                    'polygon_points' => $formattedPoints,
                 ]
             );
-        } catch (\Exception $e) {}
+
+            if ($response->failed()) {
+                \Illuminate\Support\Facades\Log::error('AI Service Sync failed: Status ' . $response->status() . ' - Body: ' . $response->body());
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('AI Service Sync exception: ' . $e->getMessage());
+        }
 
         return response()->json(['success' => true, 'zone' => $zone]);
     }

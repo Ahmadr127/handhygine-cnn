@@ -11,6 +11,7 @@ Perubahan v2:
 import time
 from enum import Enum
 import threading
+import cv2
 
 class GroupState(str, Enum):
     IDLE       = "idle"
@@ -20,7 +21,7 @@ class GroupState(str, Enum):
 
 class PersonState:
     """Menyimpan state satu orang dalam satu siklus kepatuhan."""
-    __slots__ = ("state", "carrying_time", "wash_time", "confidence", "last_frame", "last_camera_id", "instrumen_terdeteksi", "finalized")
+    __slots__ = ("state", "carrying_time", "wash_time", "confidence", "last_frame", "last_camera_id", "instrumen_terdeteksi", "finalized", "last_seen", "last_bbox")
 
     def __init__(self):
         self.state: GroupState        = GroupState.IDLE
@@ -31,6 +32,8 @@ class PersonState:
         self.last_camera_id: int      = -1
         self.instrumen_terdeteksi: bool = False   # True jika report_instrument pernah dipanggil
         self.finalized: bool = False
+        self.last_seen: float         = 0.0
+        self.last_bbox                = None
 
 
 class GroupComplianceEngine:
@@ -64,33 +67,29 @@ class GroupComplianceEngine:
         return self._person_states[person_id]
 
     def _cleanup_expired(self):
-        """Hapus entry person yang sudah lama expire atau finalize non-compliance pada timeout."""
+        """Hapus entry person yang sudah lama expire atau finalize non-compliance pada timeout/stale."""
         now = time.time()
         expired = []
+        stale_threshold = 15.0
+
         for pid, ps in list(self._person_states.items()):
             if ps.finalized:
-                first_event = min(
-                    ps.carrying_time if ps.carrying_time > 0 else now,
-                    ps.wash_time if ps.wash_time > 0 else now,
-                )
-                if now - first_event > self.window_seconds * 2:
+                # Setelah finalized, biarkan bertahan 30 detik untuk visualisasi sebelum dihapus
+                if now - ps.last_seen > 30.0:
                     expired.append(pid)
                 continue
 
-            first_event = min(
-                ps.carrying_time if ps.carrying_time > 0 else float('inf'),
-                ps.wash_time     if ps.wash_time > 0     else float('inf'),
-            )
-            if first_event == float('inf'):
-                continue
+            # Kasus 1: Membawa instrumen tetapi tidak mencuci tangan hingga keluar frame (stale)
+            if ps.instrumen_terdeteksi and ps.wash_time == 0:
+                if now - ps.last_seen > stale_threshold:
+                    self._finalize_status("tidak_patuh", ps.last_frame, ps.last_camera_id, pid, ps)
+                    continue
 
-            if ps.instrumen_terdeteksi and ps.wash_time == 0 and (now - first_event) > self.window_seconds:
-                self._finalize_status("tidak_patuh", ps.last_frame, ps.last_camera_id, pid, ps)
-                expired.append(pid)
-                continue
-
-            if ps.state == GroupState.IDLE and (now - first_event) > self.window_seconds * 2:
-                expired.append(pid)
+            # Kasus 2: Orang hanya idle / cuci tangan tanpa instrumen, lalu pergi (stale)
+            if not ps.instrumen_terdeteksi:
+                if now - ps.last_seen > stale_threshold:
+                    expired.append(pid)
+                    continue
 
         for pid in expired:
             del self._person_states[pid]
@@ -101,6 +100,18 @@ class GroupComplianceEngine:
             self._cleanup_expired()
 
     # ─── Public API ──────────────────────────────────────────────────────────
+
+    def update_last_seen(self, camera_id: int, person_id: str, frame=None, bbox=None):
+        """Update last_seen timestamp dan simpan frame terakhir."""
+        with self.lock:
+            ps = self._get_person(person_id)
+            ps.last_seen = time.time()
+            ps.last_camera_id = camera_id
+            
+            # Perbarui last_frame jika belum finalized agar mendapatkan snapshot terbaru/terbaik
+            if not ps.finalized and frame is not None:
+                ps.last_frame = frame
+                ps.last_bbox = bbox
 
     def report_instrument(self, camera_id: int, person_id: str, confidence: float, frame):
         """
@@ -161,6 +172,28 @@ class GroupComplianceEngine:
         ps.finalized = True
         self.person_status[person_id] = (status, time.time())
 
+        # Gambar bounding box hanya untuk orang yang bersangkutan pada snapshot
+        draw_frame = frame
+        if draw_frame is not None and getattr(ps, "last_bbox", None) is not None:
+            draw_frame = draw_frame.copy()
+            try:
+                x1, y1, x2, y2 = map(int, ps.last_bbox)
+                # Warna BGR: Hijau untuk patuh, Merah untuk tidak_patuh
+                color = (0, 230, 0) if status == "patuh" else (0, 0, 230)
+                # Gambar kotak
+                cv2.rectangle(draw_frame, (x1, y1), (x2, y2), color, 3)
+                
+                # Label teks di atas kotak
+                label = f"#{person_id} {status.upper()}"
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                font_scale = 0.6
+                thickness = 2
+                (w, h), _ = cv2.getTextSize(label, font, font_scale, thickness)
+                cv2.rectangle(draw_frame, (x1, y1 - h - 10), (x1 + w + 10, y1), (0, 0, 0), -1)
+                cv2.putText(draw_frame, label, (x1 + 5, y1 - 5), font, font_scale, color, thickness)
+            except Exception as e:
+                print(f"[GroupCompliance] Gagal menggambar border box snapshot: {e}")
+
         if self.on_event:
             self.on_event({
                 "group_id":              self.group_id,
@@ -170,7 +203,7 @@ class GroupComplianceEngine:
                 "membawa_instrumen":     ps.instrumen_terdeteksi,
                 "aktivitas_cuci_tangan": (status == "patuh"),
                 "confidence":            ps.confidence,
-            }, frame)
+            }, draw_frame)
 
     def _fire_event(self, status: str, frame, trigger_camera_id: int, person_id: str, ps: PersonState):
         """Simpan status akhir dan panggil callback on_event."""

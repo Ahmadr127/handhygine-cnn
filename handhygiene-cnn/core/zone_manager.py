@@ -34,7 +34,13 @@ class ZoneManager:
                 points = points_raw  # sudah dict/list dari psycopg2
 
             try:
-                polygon = Polygon([(p["x"], p["y"]) for p in points])
+                coords = []
+                for p in points:
+                    if isinstance(p, dict) and "x" in p and "y" in p:
+                        coords.append((p["x"], p["y"]))
+                    elif isinstance(p, (list, tuple)) and len(p) >= 2:
+                        coords.append((p[0], p[1]))
+                polygon = Polygon(coords)
                 self.zones.append({
                     "id": row["id"],
                     "nama": row["nama_zona"],
