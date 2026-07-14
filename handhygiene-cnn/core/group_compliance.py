@@ -159,8 +159,11 @@ class GroupComplianceEngine:
                     self._finalize_status("tidak_patuh", frame if frame is not None else ps.last_frame, camera_id, person_id, ps)
                     return
 
-            # Jika cuci tangan sudah terjadi, langsung laporkan PATUH
-            self._finalize_status("patuh", frame if frame is not None else ps.last_frame, camera_id, person_id, ps)
+            # PENTING: hanya finalize PATUH jika orang ini pernah membawa instrumen.
+            # Orang yang sekadar lewat zona cuci tangan (tanpa instrumen) TIDAK dihitung.
+            if ps.instrumen_terdeteksi:
+                self._finalize_status("patuh", frame if frame is not None else ps.last_frame, camera_id, person_id, ps)
+            # else: simpan wash_time untuk pre-emptive window, tapi tidak finalize apapun
 
     # ─── Internal ────────────────────────────────────────────────────────────
 

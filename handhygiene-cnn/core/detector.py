@@ -1,11 +1,49 @@
 """
-core/detector.py — Wrapper YOLOv8 untuk deteksi objek
+core/detector.py — Wrapper YOLOv8 untuk deteksi objek.
+Mendukung GPU AMD/Intel via DirectML (onnxruntime-directml).
+Jika model .onnx tersedia → pakai GPU DirectML.
+Jika tidak ada → fallback ke PyTorch CPU seperti biasa.
 """
 import os
 import numpy as np
 import supervision as sv
 from ultralytics import YOLO
 from config import MODEL_PATH, FALLBACK_MODEL, DETECTION_CONFIDENCE, CLASS_NAMES
+
+
+def _try_load_dml(pt_path: str, label: str):
+    """
+    Coba load model ONNX. Jika onnxruntime-directml terinstall,
+    YOLO dengan backend ONNX otomatis pakai GPU AMD/Intel via DirectML.
+    Fallback ke PyTorch .pt jika ONNX tidak tersedia.
+    """
+    onnx_path = os.path.splitext(pt_path)[0] + ".onnx"
+
+    if os.path.exists(onnx_path):
+        try:
+            # Cek apakah DirectML tersedia
+            import onnxruntime as ort
+            try:
+                providers = ort.get_available_providers()
+                using_dml = "DmlExecutionProvider" in providers
+            except AttributeError:
+                # onnxruntime-directml punya API berbeda, coba cek via modul
+                try:
+                    from onnxruntime.capi import _pybind_state as C
+                    using_dml = hasattr(C, 'get_dml_device_count')
+                except Exception:
+                    using_dml = True  # onnxruntime-directml terinstall, asumsikan DML aktif
+
+            if using_dml:
+                print(f"[Detector] {label} → ONNX + DirectML GPU (AMD Radeon): {onnx_path}")
+            else:
+                print(f"[Detector] {label} → ONNX CPU: {onnx_path}")
+            return YOLO(onnx_path, task="detect")
+        except Exception as e:
+            print(f"[Detector] ⚠  Gagal load ONNX untuk {label}: {e}, fallback ke .pt")
+
+    print(f"[Detector] {label} → PyTorch CPU: {pt_path}")
+    return YOLO(pt_path)
 
 
 class Detector:
@@ -22,18 +60,20 @@ class Detector:
             os.path.join(os.path.dirname(__file__), "..", MODEL_PATH)
         )
         if os.path.exists(model_path):
-            print(f"[Detector] Load model custom: {model_path}")
-            self.model_custom = YOLO(model_path)
+            self.model_custom = _try_load_dml(model_path, "best.pt")
         else:
             print(f"[Detector] best.pt tidak ditemukan, fungsi custom mati.")
             self.model_custom = None
 
         # 2. Load model bawaan (yolov8n.pt) khusus untuk mendeteksi 'person' (class 0)
-        print(f"[Detector] Load model person: {FALLBACK_MODEL}")
-        self.model_person = YOLO(FALLBACK_MODEL)
+        person_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", FALLBACK_MODEL)
+        )
+        self.model_person = _try_load_dml(person_path, "yolov8n.pt")
 
         self.conf = DETECTION_CONFIDENCE
         self._class_names = CLASS_NAMES
+
 
     def detect(self, frame: np.ndarray) -> sv.Detections:
         # Deteksi orang (class 0) dari model standar

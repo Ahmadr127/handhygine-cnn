@@ -43,6 +43,9 @@ INSTRUMENT_CLASSES = {CLASS_BAKI, CLASS_TROLI}
 TRACK_RESET_SECONDS = 30       # reset state jika tidak terdeteksi
 STREAM_FPS          = 15       # target FPS WebSocket stream
 FRAME_QUEUE_SIZE    = 5        # max frame antrian per kamera
+# Inference setiap N frame: 1=setiap frame (berat), 3=default (ringan), 5=sangat ringan
+# Makin besar N → CPU lebih ringan, tapi bounding box sedikit lebih "delayed"
+DETECT_EVERY_N_FRAMES = int(os.getenv("DETECT_EVERY_N_FRAMES", "3"))
 
 # ─────────────────────────────────────────────
 # Snapshot

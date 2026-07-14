@@ -16,7 +16,7 @@ import supervision as sv
 from datetime import datetime
 
 from config import (
-    FRAME_QUEUE_SIZE, STREAM_FPS,
+    FRAME_QUEUE_SIZE, STREAM_FPS, DETECT_EVERY_N_FRAMES,
     CLASS_PERSON, INSTRUMENT_CLASSES,
     CLASS_NAMES,
 )
@@ -74,8 +74,11 @@ class CameraProcessor:
         self.box_annotator = sv.BoxAnnotator(thickness=2)
         self.label_annotator = sv.LabelAnnotator(text_scale=0.5)
         
-        self.handwash_dwell_timers: dict[int, float] = {}
+        self.handwash_dwell_timers: dict[int, dict] = {}
+        # Format: { tid: {"start": float, "leave": float|None, "reported": bool} }
         self._thread: threading.Thread | None = None
+        self._frame_count: int = 0                    # counter untuk frame skipping
+        self._last_detections = None                   # deteksi terakhir (reuse saat skip)
 
     # ─── Start / Stop ────────────────────────────────────────────────────────
 
@@ -121,7 +124,11 @@ class CameraProcessor:
                 cap = cv2.VideoCapture(src)
                 continue
 
-            annotated = self._process_frame(frame)
+            self._frame_count += 1
+            # Frame skipping: inference berat hanya setiap N frame
+            # Frame yang diskip langsung pakai deteksi terakhir → CPU lebih ringan
+            run_detect = (self._frame_count % DETECT_EVERY_N_FRAMES == 0)
+            annotated = self._process_frame(frame, run_detect=run_detect)
 
             # Encode ke JPEG → base64
             _, buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 70])
@@ -152,12 +159,15 @@ class CameraProcessor:
 
         cap.release()
 
-    def _process_frame(self, frame: np.ndarray) -> np.ndarray:
+    def _process_frame(self, frame: np.ndarray, run_detect: bool = True) -> np.ndarray:
         """
         Jalankan pipeline deteksi → tracking → zone → compliance pada satu frame.
+        Jika run_detect=False, pakai deteksi terakhir (frame skipping).
         Return frame ter-annotate.
         """
-        detections = self.detector.detect(frame)
+        if run_detect:
+            self._last_detections = self.detector.detect(frame)
+        detections = self._last_detections if self._last_detections is not None else self.detector.detect(frame)
 
         if len(detections) == 0:
             # Tetap gambar zona walaupun tidak ada deteksi
@@ -211,7 +221,7 @@ class CameraProcessor:
                 bbox[0] * scale_x_ref, bbox[1] * scale_y_ref,
                 bbox[2] * scale_x_ref, bbox[3] * scale_y_ref,
             )
-            in_handwash = self.zone_mgr.bbox_intersects_handwash_zone(x1s, y1s, x2s, y2s)
+            in_handwash = self.zone_mgr.is_hands_in_zone(x1s, y1s, x2s, y2s)
             state = "monitoring"
 
             # Update last seen timestamp & frame in group engine
@@ -222,24 +232,38 @@ class CameraProcessor:
                 state = "carrying_instrument"
 
             # Zona wastafel: bbox menyentuh zona → mulai dwell timer
-            # Konfirmasi cuci tangan setelah 2 detik menetap (toleran terhadap gerakan tidak konsisten)
+            # Terkonfirmasi cuci tangan setelah menetap ≥ 2 detik di zona
             if in_handwash:
                 if tid not in self.handwash_dwell_timers:
-                    self.handwash_dwell_timers[tid] = time.time()
-
-                dwell = time.time() - self.handwash_dwell_timers[tid]
-                if dwell >= 2.0:
-                    # Kirim frame untuk fallback snapshot
-                    self.group_engine.report_hand_wash(self.camera_id, str(tid), frame)
-                    state = "hand_wash_zone"     # Terkonfirmasi (≥2 detik)
+                    # Pertama kali masuk zona → mulai timer baru
+                    self.handwash_dwell_timers[tid] = {
+                        "start":    time.time(),
+                        "leave":    None,   # masih di dalam zona
+                        "reported": False,  # belum lapor ke engine
+                    }
                 else:
-                    state = "hand_wash_pending"  # Bbox menyentuh zona, menunggu 2 detik
+                    # Masuk lagi setelah sempat keluar → clear leave time
+                    self.handwash_dwell_timers[tid]["leave"] = None
+
+                dwell = time.time() - self.handwash_dwell_timers[tid]["start"]
+                if dwell >= 2.0:
+                    # Hanya lapor ke engine SEKALI per sesi (bukan setiap frame)
+                    if not self.handwash_dwell_timers[tid]["reported"]:
+                        self.group_engine.report_hand_wash(self.camera_id, str(tid), frame)
+                        self.handwash_dwell_timers[tid]["reported"] = True
+                    state = "hand_wash_zone"     # Terkonfirmasi (≥ 2 detik)
+                else:
+                    state = "hand_wash_pending"  # Menunggu konfirmasi 2 detik
             else:
-                # Keluar zona: timer TIDAK direset agar gerakan tidak konsisten tidak batalkan
-                # Timer hanya direset jika keluar zona lebih dari 3 detik
+                # Di luar zona: catat waktu keluar & reset jika sudah > 3 detik di luar
                 if tid in self.handwash_dwell_timers:
-                    gap = time.time() - self.handwash_dwell_timers[tid]
-                    if gap > 5.0:  # grace period: boleh keluar zona max 5 detik
+                    info = self.handwash_dwell_timers[tid]
+                    if info["leave"] is None:
+                        info["leave"] = time.time()  # catat kapan keluar zona
+
+                    # Hitung gap dari waktu KELUAR, bukan dari waktu masuk
+                    gap_outside = time.time() - info["leave"]
+                    if gap_outside > 3.0:  # reset setelah 3 detik di luar zona
                         del self.handwash_dwell_timers[tid]
 
             # Cek status akhir dari compliance engine (Patuh/Tidak Patuh)

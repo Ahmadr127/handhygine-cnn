@@ -88,6 +88,23 @@ class ZoneManager:
                     return True
         return False
 
+    def is_hands_in_zone(self, x1: float, y1: float, x2: float, y2: float) -> bool:
+        """
+        Cek ketat: Titik tengah tubuh (center_x, center_y) harus berada di dalam polygon zona.
+        Ini memastikan orang tersebut benar-benar berdiri tepat di depan wastafel/sanitizer,
+        bukan hanya melintas di sampingnya (di mana pinggiran/border bbox menyenggol zona).
+        """
+        center_x = (x1 + x2) / 2.0
+        center_y = (y1 + y2) / 2.0
+
+        pt = Point(center_x, center_y)
+
+        for zone in self.zones:
+            if zone["tipe"] in ("sanitizer", "wastafel"):
+                if zone["polygon"].contains(pt):
+                    return True
+        return False
+
     def has_zones(self) -> bool:
         return len(self.zones) > 0
 
