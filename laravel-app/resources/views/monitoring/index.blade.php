@@ -152,6 +152,10 @@
         <i data-lucide="trending-up" style="width: 15px; height: 15px;"></i>
         Kepatuhan: {{ $stats['persen'] }}%
     </div>
+    <div class="chip red">
+        <i data-lucide="trending-down" style="width: 15px; height: 15px;"></i>
+        Ketidakpatuhan: {{ $stats['persen_tidak_patuh'] }}%
+    </div>
 </div>
 
 <!-- ── Tabel Log ───────────────────────────────────────────────────── -->
@@ -173,7 +177,6 @@
                     <th>Instrumen</th>
                     <th>Cuci Tangan</th>
                     <th>Waktu</th>
-                    <th>Conf.</th>
                 </tr>
             </thead>
             <tbody>
@@ -233,13 +236,10 @@
                     <td class="font-mono" style="font-size:12px;">
                         {{ $log->waktu->format('d/m/Y H:i:s') }}
                     </td>
-                    <td class="font-mono" style="font-size:12px;color:var(--text-muted)">
-                        {{ $log->confidence ?? '—' }}%
-                    </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">
+                    <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">
                         Tidak ada data untuk filter yang dipilih
                     </td>
                 </tr>

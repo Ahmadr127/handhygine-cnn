@@ -8,6 +8,7 @@
 ### 1. Jalankan AI Service (Python)
 ```bash
 cd ai-service
+.venv/scripts/activate
 python -m uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 ```
 API docs tersedia di: http://localhost:8001/docs

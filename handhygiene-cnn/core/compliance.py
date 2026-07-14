@@ -125,7 +125,7 @@ class ComplianceEngine:
         """Panggil callback on_event untuk log + snapshot."""
         ps.logged = True
         if self.on_event and frame is not None:
-            self.on_event(ps, frame)
+            self.on_event(ps, frame)    
 
     def cleanup_stale(self):
         """

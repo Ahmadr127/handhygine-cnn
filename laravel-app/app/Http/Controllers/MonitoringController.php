@@ -42,6 +42,8 @@ class MonitoringController extends Controller
         ];
         $stats['persen'] = $stats['total'] > 0
             ? round(($stats['patuh'] / $stats['total']) * 100, 1) : 0;
+        $stats['persen_tidak_patuh'] = $stats['total'] > 0
+            ? round(($stats['tidak_patuh'] / $stats['total']) * 100, 1) : 0;
 
         return view('monitoring.index', compact('logs', 'cameras', 'stats'));
     }
