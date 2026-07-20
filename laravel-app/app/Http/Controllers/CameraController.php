@@ -30,6 +30,27 @@ class CameraController extends Controller
             ->with('success', "Kamera '{$camera->nama_kamera}' berhasil ditambahkan.");
     }
 
+    public function update(Request $request, Camera $camera)
+    {
+        $validated = $request->validate([
+            'nama_kamera' => 'required|string|max:100',
+            'tipe'        => 'required|in:usb,rtsp,file',
+            'source'      => 'required|string',
+        ]);
+
+        if ($camera->aktif) {
+            try {
+                Http::timeout(10)->post(config('services.handhygiene-cnn.url') . "/api/cameras/{$camera->id}/stop");
+            } catch (\Exception $e) {}
+            $validated['aktif'] = false;
+        }
+
+        $camera->update($validated);
+
+        return redirect()->route('cameras.index')
+            ->with('success', "Kamera '{$camera->nama_kamera}' berhasil diperbarui.");
+    }
+
     public function destroy(Camera $camera)
     {
         // Stop di AI Service dulu

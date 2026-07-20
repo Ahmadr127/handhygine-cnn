@@ -41,6 +41,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('cameras')->name('cameras.')->group(function () {
         Route::get('/',                   [CameraController::class, 'index'])->name('index');
         Route::post('/',                  [CameraController::class, 'store'])->name('store');
+        Route::put('/{camera}',           [CameraController::class, 'update'])->name('update');
         Route::delete('/{camera}',        [CameraController::class, 'destroy'])->name('destroy');
         Route::post('/{camera}/start',    [CameraController::class, 'start'])->name('start');
         Route::post('/{camera}/stop',     [CameraController::class, 'stop'])->name('stop');
@@ -61,6 +62,8 @@ Route::middleware(['auth'])->group(function () {
     // Evaluasi Confusion Matrix (akses langsung via URL, tanpa link sidebar)
     Route::get('/confusion-matrix', [ConfusionMatrixController::class, 'index'])
         ->name('confusion-matrix.index');
+    Route::get('/confusion-matrix/export', [ConfusionMatrixController::class, 'export'])
+        ->name('confusion-matrix.export');
     Route::patch('/confusion-matrix/{monitoringLog}', [ConfusionMatrixController::class, 'updateGroundTruth'])
         ->name('confusion-matrix.update');
 

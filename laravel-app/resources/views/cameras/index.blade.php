@@ -144,8 +144,20 @@
                 {{ $cam->aktif ? 'AKTIF' : 'OFF' }}
             </span>
             <div class="cam-actions">
-                <button class="btn btn-danger btn-sm" style="display:inline-flex;align-items:center;justify-content:center;padding:5px;"
-                        onclick="deleteCamera({{ $cam->id }}, '{{ $cam->nama_kamera }}')">
+                <button type="button" class="btn btn-ghost btn-sm btn-edit-cam"
+                        style="display:inline-flex;align-items:center;justify-content:center;padding:5px;"
+                        title="Edit kamera"
+                        data-id="{{ $cam->id }}"
+                        data-nama="{{ e($cam->nama_kamera) }}"
+                        data-tipe="{{ e($cam->tipe) }}"
+                        data-source="{{ e($cam->source) }}">
+                    <i data-lucide="pencil" style="width: 14px; height: 14px;"></i>
+                </button>
+                <button type="button" class="btn btn-danger btn-sm btn-delete-cam"
+                        style="display:inline-flex;align-items:center;justify-content:center;padding:5px;"
+                        title="Hapus kamera"
+                        data-id="{{ $cam->id }}"
+                        data-nama="{{ e($cam->nama_kamera) }}">
                     <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
                 </button>
             </div>
@@ -228,6 +240,54 @@
     @csrf
     @method('DELETE')
 </form>
+
+<!-- Modal Edit Kamera -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal-box" style="width:480px;">
+        <div class="modal-header">
+            <span style="font-weight:600;display:flex;align-items:center;gap:6px;">
+                <i data-lucide="pencil" style="width:16px;height:16px;"></i> Edit Kamera
+            </span>
+            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form action="" method="POST" id="editCameraForm">
+                @csrf
+                @method('PUT')
+                <div class="form-group">
+                    <label class="form-label">Nama Kamera</label>
+                    <input type="text" name="nama_kamera" class="form-control" id="editNama" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tipe Kamera</label>
+                    <select name="tipe" class="form-control" id="editTipe" onchange="onEditTipeChange()">
+                        <option value="usb">USB / Webcam</option>
+                        <option value="rtsp">RTSP / IP Camera</option>
+                        <option value="file">File Video</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Source</label>
+                    <div style="display:flex;gap:8px;">
+                        <input type="text" name="source" class="form-control" id="editSource" required>
+                        <button type="button" class="btn btn-ghost btn-sm" id="editScanBtn" style="display:inline-flex;align-items:center;justify-content:center;padding:5px;"
+                                onclick="scanUsbEdit()" title="Scan USB">
+                            <i data-lucide="search" style="width:14px;height:14px;"></i>
+                        </button>
+                    </div>
+                    <div id="editUsbScanResult" class="usb-scan-result" style="display:none;"></div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px;" id="editSourceHint"></div>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:16px;">
+                    <button type="button" class="btn btn-ghost" style="flex:1;" onclick="closeEditModal()">Batal</button>
+                    <button type="submit" class="btn btn-primary" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;">
+                        <i data-lucide="save" style="width:14px;height:14px;"></i> Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -296,5 +356,103 @@
         form.action = `/cameras/${id}`;
         form.submit();
     }
+
+    function editCameraFromBtn(btn) {
+        editCamera(
+            btn.dataset.id,
+            btn.dataset.nama,
+            btn.dataset.tipe,
+            btn.dataset.source
+        );
+    }
+
+    function editCamera(id, nama, tipe, source) {
+        document.getElementById('editCameraForm').action = `/cameras/${id}`;
+        document.getElementById('editNama').value = nama;
+        document.getElementById('editTipe').value = tipe;
+        document.getElementById('editSource').value = source;
+        document.getElementById('editUsbScanResult').style.display = 'none';
+        onEditTipeChange();
+        document.getElementById('editModal').classList.add('open');
+        lucide.createIcons();
+    }
+
+    document.querySelectorAll('.btn-edit-cam').forEach(btn => {
+        btn.addEventListener('click', () => editCameraFromBtn(btn));
+    });
+    document.querySelectorAll('.btn-delete-cam').forEach(btn => {
+        btn.addEventListener('click', () => deleteCamera(btn.dataset.id, btn.dataset.nama));
+    });
+
+    function closeEditModal() {
+        document.getElementById('editModal').classList.remove('open');
+    }
+
+    function onEditTipeChange() {
+        const tipe = document.getElementById('editTipe').value;
+        const input = document.getElementById('editSource');
+        const hint  = document.getElementById('editSourceHint');
+        const scan  = document.getElementById('editScanBtn');
+        const usbRes = document.getElementById('editUsbScanResult');
+
+        usbRes.style.display = 'none';
+
+        if (tipe === 'usb') {
+            input.placeholder = '0 (index kamera)';
+            hint.textContent  = 'Masukkan index kamera (0, 1, 2...)';
+            scan.style.display = 'inline-flex';
+        } else if (tipe === 'rtsp') {
+            input.placeholder = 'rtsp://user:pass@192.168.1.100:554/stream';
+            hint.textContent  = 'URL RTSP lengkap termasuk username & password';
+            scan.style.display = 'none';
+        } else {
+            input.placeholder = 'C:/path/to/video.mp4';
+            hint.textContent  = 'Path absolut file video';
+            scan.style.display = 'none';
+        }
+    }
+
+    async function scanUsbEdit() {
+        const btn = document.getElementById('editScanBtn');
+        const res = document.getElementById('editUsbScanResult');
+        btn.innerHTML = '<i data-lucide="loader" class="animate-spin" style="width:14px;height:14px;"></i>';
+        btn.disabled = true;
+        lucide.createIcons();
+
+        try {
+            const data = await fetch('/cameras/scan/usb').then(r => r.json());
+            res.style.display = 'block';
+            if (data.error) {
+                res.innerHTML = `<div style="color:var(--red);font-size:12px;display:flex;align-items:center;gap:4px;"><i data-lucide="alert-circle" style="width:14px;height:14px;"></i> ${data.error}</div>`;
+            } else if (!data.length) {
+                res.innerHTML = `<div style="color:var(--text-muted);font-size:12px;">Tidak ada USB camera terdeteksi</div>`;
+            } else {
+                res.innerHTML = data.map(c => `
+                    <div class="usb-item">
+                        <span style="display:flex;align-items:center;gap:4px;"><i data-lucide="video" style="width:14px;height:14px;"></i> ${c.label}</span>
+                        <button type="button" class="btn btn-ghost btn-sm" data-src="${c.source}">
+                            Pilih
+                        </button>
+                    </div>
+                `).join('');
+                res.querySelectorAll('button[data-src]').forEach(b => {
+                    b.addEventListener('click', () => {
+                        document.getElementById('editSource').value = b.dataset.src;
+                    });
+                });
+            }
+        } catch {
+            res.innerHTML = `<div style="color:var(--red);font-size:12px;display:flex;align-items:center;gap:4px;"><i data-lucide="alert-circle" style="width:14px;height:14px;"></i> AI Service tidak tersedia</div>`;
+            res.style.display = 'block';
+        }
+
+        btn.innerHTML = '<i data-lucide="search" style="width:14px;height:14px;"></i>';
+        btn.disabled = false;
+        lucide.createIcons();
+    }
+
+    document.getElementById('editModal').addEventListener('click', function(e) {
+        if (e.target === this) closeEditModal();
+    });
 </script>
 @endpush

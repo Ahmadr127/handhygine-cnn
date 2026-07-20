@@ -18,7 +18,7 @@ from datetime import datetime
 from config import (
     FRAME_QUEUE_SIZE, STREAM_FPS, DETECT_EVERY_N_FRAMES,
     CLASS_PERSON, INSTRUMENT_CLASSES,
-    CLASS_NAMES,
+    CLASS_NAMES, TRACK_RESET_SECONDS,
 )
 from core.detector import Detector
 from core.tracker import Tracker
@@ -51,6 +51,18 @@ STATE_COLORS["hand_wash_pending"] = (200, 200, 0)    # kuning redup (sedang dwel
 STATE_COLORS["hand_washed_done"] = (0, 200, 150)    # hijau-tosca (sudah cuci)
 
 
+def make_person_key(camera_id: int, tracker_id: int) -> str:
+    """Kunci sesi compliance unik per kamera + ByteTrack ID."""
+    return f"{camera_id}:{tracker_id}"
+
+
+def display_tracker_id(person_key: str) -> str:
+    """Ambil nomor tracker untuk label UI / log DB (contoh: '4:13' → '13')."""
+    if ":" in person_key:
+        return person_key.rsplit(":", 1)[-1]
+    return person_key
+
+
 class CameraProcessor:
     """
     Memproses satu kamera: capture + detect + track + compliance.
@@ -76,6 +88,7 @@ class CameraProcessor:
         
         self.handwash_dwell_timers: dict[int, dict] = {}
         # Format: { tid: {"start": float, "leave": float|None, "reported": bool} }
+        self._tid_last_seen: dict[int, float] = {}   # deteksi reuse ID ByteTrack
         self._thread: threading.Thread | None = None
         self._frame_count: int = 0                    # counter untuk frame skipping
         self._last_detections = None                   # deteksi terakhir (reuse saat skip)
@@ -193,9 +206,26 @@ class CameraProcessor:
 
         labels = []
         colors = []
+        now = time.time()
+        current_tids: set[int] = set()
 
         for i in range(len(persons)):
             tid = int(persons.tracker_id[i]) if persons.tracker_id is not None else -1
+            if tid < 0:
+                continue
+            current_tids.add(tid)
+
+            person_key = make_person_key(self.camera_id, tid)
+            last_seen = self._tid_last_seen.get(tid)
+            gap = (now - last_seen) if last_seen is not None else None
+
+            # ByteTrack reuse ID setelah track lama hilang → reset sesi compliance
+            if self._should_reset_track_session(person_key, gap):
+                self.group_engine.reset_session(person_key)
+                self.handwash_dwell_timers.pop(tid, None)
+
+            self._tid_last_seen[tid] = now
+
             bbox = persons.xyxy[i]
             conf = float(persons.confidence[i])
 
@@ -215,21 +245,22 @@ class CameraProcessor:
             # Cek apakah membawa instrumen (overlap/proximity dengan frame ini)
             near_instrument = self._is_near_instrument(bbox, instr_boxes)
 
-            # Zona wastafel: cek intersection bounding box orang vs polygon zona
-            # Lebih fleksibel dari cek satu titik — cocok untuk gerakan yang tidak konsisten
+            # Zona wastafel: bbox orang harus overlap dengan polygon zona
+            # (titik tengah terlalu ketat — orang berdiri di depan sanitizer dinding
+            #  sering tidak masuk zona kecil di dinding meskipun sedang cuci tangan)
             x1s, y1s, x2s, y2s = (
                 bbox[0] * scale_x_ref, bbox[1] * scale_y_ref,
                 bbox[2] * scale_x_ref, bbox[3] * scale_y_ref,
             )
-            in_handwash = self.zone_mgr.is_hands_in_zone(x1s, y1s, x2s, y2s)
+            in_handwash = self.zone_mgr.bbox_intersects_handwash_zone(x1s, y1s, x2s, y2s)
             state = "monitoring"
 
             # Update last seen timestamp & frame in group engine
-            self.group_engine.update_last_seen(self.camera_id, str(tid), frame, bbox)
+            self.group_engine.update_last_seen(self.camera_id, person_key, frame, bbox)
 
             if near_instrument:
                 # Laporkan ke engine (untuk compliance tracking)
-                self.group_engine.report_instrument(self.camera_id, str(tid), conf, frame)
+                self.group_engine.report_instrument(self.camera_id, person_key, conf, frame)
                 # Tampilkan label HANYA jika instrumen benar ada di frame ini
                 state = "carrying_instrument"
 
@@ -251,7 +282,7 @@ class CameraProcessor:
                 if dwell >= 2.0:
                     # Hanya lapor ke engine SEKALI per sesi (bukan setiap frame)
                     if not self.handwash_dwell_timers[tid]["reported"]:
-                        self.group_engine.report_hand_wash(self.camera_id, str(tid), frame)
+                        self.group_engine.report_hand_wash(self.camera_id, person_key, frame)
                         self.handwash_dwell_timers[tid]["reported"] = True
                     state = "hand_wash_zone"     # Terkonfirmasi (≥ 2 detik)
                 else:
@@ -270,20 +301,26 @@ class CameraProcessor:
 
             # Cek status akhir dari compliance engine (Patuh/Tidak Patuh)
             # Status final selalu menimpa state sementara
-            final_status = self.group_engine.get_person_status(str(tid))
+            final_status = self.group_engine.get_person_status(person_key)
             if final_status:
                 state = final_status
             elif state == "monitoring":
                 # Tampilkan state engine internal HANYA untuk hand_washed
                 # JANGAN tampilkan "carrying" dari engine ke label video —
                 # itu bisa menyebabkan false positive saat instrumen sudah pergi dari frame
-                engine_state = self.group_engine.get_engine_state(str(tid))
+                engine_state = self.group_engine.get_engine_state(person_key)
                 if engine_state == "hand_washed":
                     state = "hand_washed_done"    # Sudah cuci tangan ✓
 
             label = f"#{tid} {STATE_LABELS_ID.get(state, state)}"
             labels.append(label)
             colors.append(STATE_COLORS.get(state, (200, 200, 200)))
+
+        # Bersihkan tracker yang sudah lama tidak terlihat di frame ini
+        for stale_tid in set(self._tid_last_seen) - current_tids:
+            if now - self._tid_last_seen[stale_tid] > TRACK_RESET_SECONDS:
+                del self._tid_last_seen[stale_tid]
+                self.handwash_dwell_timers.pop(stale_tid, None)
 
         # Annotate persons
         annotated = frame.copy()
@@ -304,6 +341,24 @@ class CameraProcessor:
         self.group_engine.cleanup_expired()
 
         return annotated
+
+    def _should_reset_track_session(self, person_key: str, gap: float | None) -> bool:
+        """
+        Reset sesi jika ByteTrack reuse ID atau track lama sudah final.
+        - gap None  → pertama kali ID muncul di kamera ini
+        - gap besar → track lama sudah hilang cukup lama (reuse ID)
+        - gap kecil + sesi lama sudah PATUH/TIDAK PATUH → orang baru dapat ID yang sama
+        """
+        if gap is None:
+            return self.group_engine.has_session(person_key)
+
+        if gap > TRACK_RESET_SECONDS:
+            return True
+
+        if gap > 0 and self.group_engine.is_finalized(person_key):
+            return True
+
+        return False
 
     def _is_near_instrument(self, person_bbox, instr_boxes, overlap_threshold=0.5) -> bool:
         """

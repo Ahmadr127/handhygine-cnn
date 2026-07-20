@@ -157,8 +157,8 @@
         <label class="form-label">Ground Truth</label>
         <select name="ground_truth" class="form-control">
             <option value="">Semua</option>
-            <option value="sudah" {{ request('ground_truth') === 'sudah' ? 'selected' : '' }}>Sudah diisi</option>
             <option value="belum" {{ request('ground_truth') === 'belum' ? 'selected' : '' }}>Belum diisi</option>
+            <option value="sudah" {{ request('ground_truth') === 'sudah' ? 'selected' : '' }}>Sudah diisi</option>
             <option value="patuh" {{ request('ground_truth') === 'patuh' ? 'selected' : '' }}>GT Patuh</option>
             <option value="tidak_patuh" {{ request('ground_truth') === 'tidak_patuh' ? 'selected' : '' }}>GT Tidak Patuh</option>
         </select>
@@ -171,12 +171,23 @@
         <label class="form-label">Tanggal Akhir</label>
         <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
     </div>
-    <div style="display:flex;gap:8px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button type="submit" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:4px;">
             <i data-lucide="search" style="width:14px;height:14px;"></i> Filter
         </button>
+        <a href="{{ route('confusion-matrix.index', ['ground_truth' => 'belum'] + request()->except(['ground_truth', 'page'])) }}"
+           class="btn {{ request('ground_truth') === 'belum' ? 'btn-primary' : 'btn-ghost' }}"
+           style="display:inline-flex;align-items:center;gap:4px;"
+           title="Tampilkan hanya data yang Ground Truth-nya belum diisi">
+            <i data-lucide="circle-dashed" style="width:14px;height:14px;"></i> Belum diisi GT
+        </a>
         <a href="{{ route('confusion-matrix.index') }}" class="btn btn-ghost" style="display:inline-flex;align-items:center;gap:4px;">
             <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Reset
+        </a>
+        <a href="{{ route('confusion-matrix.export', request()->query()) }}"
+           class="btn btn-ghost" style="display:inline-flex;align-items:center;gap:4px;"
+           title="Export CSV sesuai filter aktif">
+            <i data-lucide="download" style="width:14px;height:14px;"></i> Export CSV
         </a>
     </div>
 </form>
@@ -293,34 +304,59 @@
             <i data-lucide="clipboard-check" style="width:16px;height:16px;color:var(--text-muted);"></i>
             Tabel Data Evaluasi
         </span>
-        <span class="text-muted text-sm">{{ $logs->total() }} record</span>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <span class="text-muted text-sm">{{ $logs->total() }} record</span>
+            <a href="{{ route('confusion-matrix.export', request()->query()) }}"
+               class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:4px;">
+                <i data-lucide="download" style="width:14px;height:14px;"></i> Export CSV
+            </a>
+        </div>
     </div>
     <div class="table-wrapper">
         <table>
             <thead>
                 <tr>
                     <th>No</th>
-                    <th>Video</th>
                     <th>Person ID</th>
+                    <th>Video</th>
+                    <th>Zona</th>
+                    <th>Dwell &gt; 2s</th>
+                    <th>Hand Washed</th>
                     <th>Prediksi Sistem</th>
                     <th>Ground Truth</th>
+                    <th>CM</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($logs as $log)
                 @php
-                    $videoName = $log->camera?->nama_kamera
-                        ?: ($log->camera?->source ?? '—');
+                    $row = \App\Http\Controllers\ConfusionMatrixController::buildEvaluationRow(
+                        $log,
+                        $logs->firstItem() + $loop->index
+                    );
+                    $cmClass = $row['cm_class'];
+                    $cmColor = match ($cmClass) {
+                        'TP' => 'var(--green)',
+                        'TN' => 'var(--accent)',
+                        'FP' => 'var(--orange)',
+                        'FN' => 'var(--red)',
+                        default => 'var(--text-muted)',
+                    };
                 @endphp
                 <tr data-log-id="{{ $log->id }}">
-                    <td>{{ $logs->firstItem() + $loop->index }}</td>
-                    <td>{{ $videoName }}</td>
+                    <td>{{ $row['no'] }}</td>
                     <td>
                         <span class="font-mono" style="color:var(--text-primary);font-weight:600;">
-                            #{{ $log->person_id }}
+                            {{ $row['person_id'] }}
                         </span>
                     </td>
+                    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $row['video'] }}">
+                        {{ $row['video'] }}
+                    </td>
+                    <td style="font-size:12px;max-width:140px;" title="{{ $row['zona'] }}">{{ $row['zona'] }}</td>
+                    <td>{{ $row['dwell_gt_2s'] }}</td>
+                    <td>{{ $row['hand_washed'] }}</td>
                     <td>
                         <span class="badge {{ $log->status === 'patuh' ? 'badge-patuh' : 'badge-tidak-patuh' }}" style="display:inline-flex;align-items:center;gap:4px;">
                             @if($log->status === 'patuh')
@@ -343,6 +379,11 @@
                         <span class="save-status" data-status-for="{{ $log->id }}"></span>
                     </td>
                     <td>
+                        <span class="font-mono" style="font-weight:700;color:{{ $cmColor }};" data-cm-for="{{ $log->id }}">
+                            {{ $cmClass }}
+                        </span>
+                    </td>
+                    <td>
                         @if($log->snapshot_path)
                         <button type="button" class="btn btn-ghost btn-sm"
                                 style="display:inline-flex;align-items:center;gap:4px;"
@@ -356,7 +397,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">
+                    <td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted);">
                         Tidak ada data log monitoring untuk dievaluasi
                     </td>
                 </tr>
@@ -459,6 +500,22 @@
 
                 const data = await res.json();
                 if (data.metrics) applyMetrics(data.metrics);
+
+                // Update label kelas confusion matrix di baris ini
+                const cmEl = document.querySelector(`[data-cm-for="${id}"]`);
+                if (cmEl) {
+                    const predBadge = sel.closest('tr')?.querySelector('.badge');
+                    const pred = predBadge?.classList.contains('badge-patuh') ? 'patuh' : 'tidak_patuh';
+                    const gt = value;
+                    let cls = '—';
+                    let color = 'var(--text-muted)';
+                    if (gt === 'patuh' && pred === 'patuh') { cls = 'TP'; color = 'var(--green)'; }
+                    else if (gt === 'tidak_patuh' && pred === 'patuh') { cls = 'FP'; color = 'var(--orange)'; }
+                    else if (gt === 'patuh' && pred === 'tidak_patuh') { cls = 'FN'; color = 'var(--red)'; }
+                    else if (gt === 'tidak_patuh' && pred === 'tidak_patuh') { cls = 'TN'; color = 'var(--accent)'; }
+                    cmEl.textContent = cls;
+                    cmEl.style.color = color;
+                }
 
                 if (statusEl) {
                     statusEl.className = 'save-status ok';

@@ -99,6 +99,21 @@ class GroupComplianceEngine:
         with self.lock:
             self._cleanup_expired()
 
+    def reset_session(self, person_id: str):
+        """Hapus state sesi — dipanggil saat ByteTrack reuse ID di kamera yang sama."""
+        with self.lock:
+            self._person_states.pop(person_id, None)
+            self.person_status.pop(person_id, None)
+
+    def has_session(self, person_id: str) -> bool:
+        with self.lock:
+            return person_id in self._person_states or person_id in self.person_status
+
+    def is_finalized(self, person_id: str) -> bool:
+        with self.lock:
+            ps = self._person_states.get(person_id)
+            return bool(ps and ps.finalized)
+
     # ─── Public API ──────────────────────────────────────────────────────────
 
     def update_last_seen(self, camera_id: int, person_id: str, frame=None, bbox=None):
@@ -187,7 +202,8 @@ class GroupComplianceEngine:
                 cv2.rectangle(draw_frame, (x1, y1), (x2, y2), color, 3)
                 
                 # Label teks di atas kotak
-                label = f"#{person_id} {status.upper()}"
+                display_id = person_id.rsplit(":", 1)[-1] if ":" in person_id else person_id
+                label = f"#{display_id} {status.upper()}"
                 font = cv2.FONT_HERSHEY_SIMPLEX
                 font_scale = 0.6
                 thickness = 2
@@ -198,9 +214,10 @@ class GroupComplianceEngine:
                 print(f"[GroupCompliance] Gagal menggambar border box snapshot: {e}")
 
         if self.on_event:
+            display_id = person_id.rsplit(":", 1)[-1] if ":" in person_id else person_id
             self.on_event({
                 "group_id":              self.group_id,
-                "person_id":             person_id,
+                "person_id":             display_id,
                 "camera_id":             trigger_camera_id,
                 "status":                status,
                 "membawa_instrumen":     ps.instrumen_terdeteksi,
