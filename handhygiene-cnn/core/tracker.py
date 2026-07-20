@@ -1,9 +1,19 @@
 """
 core/tracker.py — ByteTrack wrapper via supervision
 """
+import warnings
 import numpy as np
 import supervision as sv
 from config import CLASS_PERSON
+
+# Suppress FutureWarning dari sv.ByteTrack yang deprecated di supervision >= 0.28
+# (Fungsionalitas masih normal sampai supervision 0.30)
+warnings.filterwarnings(
+    "ignore",
+    message=".*ByteTrack.*deprecated.*",
+    category=FutureWarning,
+    module="supervision",
+)
 
 
 class Tracker:

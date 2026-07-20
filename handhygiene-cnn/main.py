@@ -5,6 +5,10 @@ Jalankan: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 import sys
 import os
 
+# Set SEBELUM import apapun yang bisa memicu ultralytics
+# Mencegah auto-install onnx/onnxruntime-gpu saat load model
+os.environ.setdefault("ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS", "1")
+
 # Pastikan import relatif bekerja
 sys.path.insert(0, os.path.dirname(__file__))
 

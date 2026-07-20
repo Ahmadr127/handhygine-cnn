@@ -212,7 +212,7 @@ class CameraProcessor:
             cx_scaled = cx * scale_x_ref
             cy_scaled = cy * scale_y_ref
 
-            # Cek apakah membawa instrumen (overlap/proximity)
+            # Cek apakah membawa instrumen (overlap/proximity dengan frame ini)
             near_instrument = self._is_near_instrument(bbox, instr_boxes)
 
             # Zona wastafel: cek intersection bounding box orang vs polygon zona
@@ -228,7 +228,9 @@ class CameraProcessor:
             self.group_engine.update_last_seen(self.camera_id, str(tid), frame, bbox)
 
             if near_instrument:
+                # Laporkan ke engine (untuk compliance tracking)
                 self.group_engine.report_instrument(self.camera_id, str(tid), conf, frame)
+                # Tampilkan label HANYA jika instrumen benar ada di frame ini
                 state = "carrying_instrument"
 
             # Zona wastafel: bbox menyentuh zona → mulai dwell timer
@@ -267,16 +269,17 @@ class CameraProcessor:
                         del self.handwash_dwell_timers[tid]
 
             # Cek status akhir dari compliance engine (Patuh/Tidak Patuh)
+            # Status final selalu menimpa state sementara
             final_status = self.group_engine.get_person_status(str(tid))
             if final_status:
                 state = final_status
-            elif state not in ("hand_wash_zone", "hand_wash_pending", "carrying_instrument"):
-                # Tampilkan state engine internal untuk monitoring
+            elif state == "monitoring":
+                # Tampilkan state engine internal HANYA untuk hand_washed
+                # JANGAN tampilkan "carrying" dari engine ke label video —
+                # itu bisa menyebabkan false positive saat instrumen sudah pergi dari frame
                 engine_state = self.group_engine.get_engine_state(str(tid))
                 if engine_state == "hand_washed":
-                    state = "hand_washed_done"    # Sudah cuci tangan
-                elif engine_state == "carrying":
-                    state = "carrying_instrument"  # Engine confirm membawa instrumen
+                    state = "hand_washed_done"    # Sudah cuci tangan ✓
 
             label = f"#{tid} {STATE_LABELS_ID.get(state, state)}"
             labels.append(label)

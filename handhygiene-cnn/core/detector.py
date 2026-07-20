@@ -1,49 +1,26 @@
 """
 core/detector.py — Wrapper YOLOv8 untuk deteksi objek.
-Mendukung GPU AMD/Intel via DirectML (onnxruntime-directml).
-Jika model .onnx tersedia → pakai GPU DirectML.
-Jika tidak ada → fallback ke PyTorch CPU seperti biasa.
+Menggunakan model .pt langsung dengan PyTorch (CUDA otomatis jika tersedia).
 """
 import os
+import torch
 import numpy as np
 import supervision as sv
 from ultralytics import YOLO
-from config import MODEL_PATH, FALLBACK_MODEL, DETECTION_CONFIDENCE, CLASS_NAMES
+from config import MODEL_PATH, FALLBACK_MODEL, DETECTION_CONFIDENCE, INSTRUMENT_CONFIDENCE, INSTRUMENT_MIN_AREA, CLASS_NAMES
 
 
-def _try_load_dml(pt_path: str, label: str):
+def _load_model(pt_path: str, label: str) -> YOLO:
     """
-    Coba load model ONNX. Jika onnxruntime-directml terinstall,
-    YOLO dengan backend ONNX otomatis pakai GPU AMD/Intel via DirectML.
-    Fallback ke PyTorch .pt jika ONNX tidak tersedia.
+    Load model .pt dengan PyTorch.
+    CUDA otomatis aktif jika torch.cuda.is_available().
     """
-    onnx_path = os.path.splitext(pt_path)[0] + ".onnx"
-
-    if os.path.exists(onnx_path):
-        try:
-            # Cek apakah DirectML tersedia
-            import onnxruntime as ort
-            try:
-                providers = ort.get_available_providers()
-                using_dml = "DmlExecutionProvider" in providers
-            except AttributeError:
-                # onnxruntime-directml punya API berbeda, coba cek via modul
-                try:
-                    from onnxruntime.capi import _pybind_state as C
-                    using_dml = hasattr(C, 'get_dml_device_count')
-                except Exception:
-                    using_dml = True  # onnxruntime-directml terinstall, asumsikan DML aktif
-
-            if using_dml:
-                print(f"[Detector] {label} → ONNX + DirectML GPU (AMD Radeon): {onnx_path}")
-            else:
-                print(f"[Detector] {label} → ONNX CPU: {onnx_path}")
-            return YOLO(onnx_path, task="detect")
-        except Exception as e:
-            print(f"[Detector] ⚠  Gagal load ONNX untuk {label}: {e}, fallback ke .pt")
-
-    print(f"[Detector] {label} → PyTorch CPU: {pt_path}")
-    return YOLO(pt_path)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    backend = f"PyTorch {'CUDA (GPU)' if device == 'cuda' else 'CPU'}"
+    print(f"[Detector] {label} → {backend}: {pt_path}")
+    model = YOLO(pt_path)
+    model.to(device)
+    return model
 
 
 class Detector:
@@ -60,7 +37,7 @@ class Detector:
             os.path.join(os.path.dirname(__file__), "..", MODEL_PATH)
         )
         if os.path.exists(model_path):
-            self.model_custom = _try_load_dml(model_path, "best.pt")
+            self.model_custom = _load_model(model_path, "best.pt")
         else:
             print(f"[Detector] best.pt tidak ditemukan, fungsi custom mati.")
             self.model_custom = None
@@ -69,9 +46,11 @@ class Detector:
         person_path = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", FALLBACK_MODEL)
         )
-        self.model_person = _try_load_dml(person_path, "yolov8n.pt")
+        self.model_person = _load_model(person_path, "yolov8n.pt")
 
-        self.conf = DETECTION_CONFIDENCE
+        self.conf        = DETECTION_CONFIDENCE
+        self.instr_conf  = INSTRUMENT_CONFIDENCE
+        self.instr_min_area = INSTRUMENT_MIN_AREA
         self._class_names = CLASS_NAMES
 
 
@@ -82,14 +61,22 @@ class Detector:
 
         # Deteksi alat medis dari model training
         if self.model_custom:
-            res_custom = self.model_custom(frame, conf=self.conf, verbose=False)[0]
+            # Confidence lebih tinggi khusus untuk instrumen → tekan false positive
+            res_custom = self.model_custom(frame, conf=self.instr_conf, verbose=False)[0]
             det_custom = sv.Detections.from_ultralytics(res_custom)
-            
+
+            # Filter area minimum: buang deteksi instrumen yang terlalu kecil
+            if len(det_custom) > 0:
+                boxes = det_custom.xyxy
+                areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+                area_mask = areas >= self.instr_min_area
+                det_custom = det_custom[area_mask]
+
             # Mapping class ID: Karena model best.pt di-training dengan 1 class (baki=0),
             # kita ubah ID-nya menjadi 1 agar sesuai dengan config dan tidak bentrok dengan person (0).
             if len(det_custom) > 0:
                 det_custom.class_id = np.full_like(det_custom.class_id, 1)
-            
+
             # Gabungkan hasil deteksi
             if len(det_person) > 0 and len(det_custom) > 0:
                 detections = sv.Detections.merge([det_person, det_custom])

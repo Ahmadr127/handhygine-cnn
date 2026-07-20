@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CameraController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\MonitoringController;
+use App\Http\Controllers\ConfusionMatrixController;
 use App\Http\Controllers\Auth\LoginController;
 
 /*
@@ -56,6 +57,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/',           [MonitoringController::class, 'index'])->name('index');
         Route::get('/{monitoringLog}', [MonitoringController::class, 'show'])->name('show');
     });
+
+    // Evaluasi Confusion Matrix (akses langsung via URL, tanpa link sidebar)
+    Route::get('/confusion-matrix', [ConfusionMatrixController::class, 'index'])
+        ->name('confusion-matrix.index');
+    Route::patch('/confusion-matrix/{monitoringLog}', [ConfusionMatrixController::class, 'updateGroundTruth'])
+        ->name('confusion-matrix.update');
 
     // API Proxy ke AI Service (untuk refresh stats di dashboard)
     Route::prefix('api')->group(function () {

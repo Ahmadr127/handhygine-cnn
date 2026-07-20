@@ -35,10 +35,9 @@ def validate():
     print(f"  Recall   : {metrics.box.mr:.4f}")
     print("=" * 50)
 
-    # Per-class results
+    # Per-class results (model kustom: hanya baki_medis)
     print("\n[INFO] Per-class mAP50:")
-    class_names = ["tenaga_kesehatan", "baki_medis", "troli_medis",
-                   "wastafel", "hand_sanitizer", "pintu_masuk"]
+    class_names = ["baki_medis"]
     for i, name in enumerate(class_names):
         if i < len(metrics.box.maps):
             print(f"  {name:20s}: {metrics.box.maps[i]:.4f}")

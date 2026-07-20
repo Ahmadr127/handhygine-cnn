@@ -15,6 +15,7 @@ class MonitoringLog extends Model
         'camera_id',
         'waktu',
         'status',
+        'ground_truth',
         'membawa_instrumen',
         'aktivitas_cuci_tangan',
         'snapshot_path',

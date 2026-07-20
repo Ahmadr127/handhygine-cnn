@@ -19,6 +19,12 @@ MODEL_PATH = os.getenv("MODEL_PATH", "../models/best.pt")
 # Fallback ke YOLOv8n pre-trained jika best.pt belum ada
 FALLBACK_MODEL = "yolov8n.pt"
 DETECTION_CONFIDENCE = float(os.getenv("DETECTION_CONFIDENCE", "0.45"))
+# Confidence khusus untuk deteksi instrumen medis (best.pt).
+# Lebih tinggi dari orang untuk menekan false positive (baju putih, bayangan, dll.)
+INSTRUMENT_CONFIDENCE = float(os.getenv("INSTRUMENT_CONFIDENCE", "0.65"))
+# Luas minimum bounding box instrumen (piksel²).
+# Deteksi instrumen yang terlalu kecil hampir pasti false positive.
+INSTRUMENT_MIN_AREA = int(os.getenv("INSTRUMENT_MIN_AREA", "3000"))
 
 # ─────────────────────────────────────────────
 # Class mapping (sesuai data.yaml)
