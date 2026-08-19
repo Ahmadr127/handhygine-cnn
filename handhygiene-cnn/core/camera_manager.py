@@ -279,7 +279,7 @@ class CameraProcessor:
                     self.handwash_dwell_timers[tid]["leave"] = None
 
                 dwell = time.time() - self.handwash_dwell_timers[tid]["start"]
-                if dwell >= 2.0:
+                if dwell >= 5.0:
                     # Hanya lapor ke engine SEKALI per sesi (bukan setiap frame)
                     if not self.handwash_dwell_timers[tid]["reported"]:
                         self.group_engine.report_hand_wash(self.camera_id, person_key, frame)
